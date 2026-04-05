@@ -1,0 +1,16 @@
+// Exemplo 7: Comentários
+// Este arquivo testa diferentes tipos de comentários
+
+// Comentário de linha simples
+x = 10;
+
+// Outro comentário
+y = 20;
+
+/* Comentário de bloco 
+   em múltiplas linhas
+   testando o parser */
+   
+z = x + y;
+
+print(z); // Comentário no final da linha

@@ -1,0 +1,5 @@
+// Exemplo 1: Hello World
+// Teste básico de print
+
+print("Hello, World!");
+print("Bem-vindo à IDE Compilador!");

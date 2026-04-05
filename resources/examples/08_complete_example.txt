@@ -1,0 +1,37 @@
+// Exemplo 8: Programa Completo
+// Combina várias features
+
+// Variáveis
+x = 100;
+y = 50;
+z = 25;
+
+// Expressões aritméticas
+soma = x + y + z;
+media = soma / 3;
+
+// Expressões relacionais
+maior = x > y;
+igual = y == z;
+
+// Expressões lógicas
+condicao = (x > y) && (y > z);
+
+// Operações bitwise
+flags = 0b1010;
+mascara = 0b0011;
+resultado_bits = flags & mascara;
+
+// Saída
+print("=== Calculadora ===");
+print("Soma:");
+print(soma);
+print("Média:");
+print(media);
+print("X é maior que Y:");
+print(maior);
+print("Condição:");
+print(condicao);
+print("Resultado bitwise:");
+print(resultado_bits);
+print("=== Fim ===");

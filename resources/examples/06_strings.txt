@@ -1,0 +1,10 @@
+// Exemplo 6: Strings e Caracteres
+
+nome = "Compilador";
+versao = "1.0";
+letra = 'A';
+
+print(nome);
+print(versao);
+print(letra);
+print("Trabalho T2 - Compiladores");

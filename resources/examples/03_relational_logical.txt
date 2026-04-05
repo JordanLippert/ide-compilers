@@ -1,0 +1,19 @@
+// Exemplo 3: Expressões Relacionais e Lógicas
+
+a = 10;
+b = 20;
+
+// Relacionais
+resultado1 = a > b;
+resultado2 = a < b;
+resultado3 = a == b;
+resultado4 = a != b;
+
+// Lógicas
+resultado5 = (a < b) && (b > 5);
+resultado6 = (a > 100) || (b < 30);
+resultado7 = !(a == b);
+
+print(resultado1);
+print(resultado5);
+print(resultado7);

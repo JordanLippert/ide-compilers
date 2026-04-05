@@ -1,0 +1,21 @@
+// Exemplo 4: Operadores Bitwise
+
+x = 12;
+y = 5;
+
+// Operações bitwise
+resultado_and = x & y;
+resultado_or = x | y;
+resultado_xor = x ^ y;
+resultado_not = ~x;
+resultado_shift_left = x << 2;
+resultado_shift_right = x >> 1;
+
+print("AND:");
+print(resultado_and);
+print("OR:");
+print(resultado_or);
+print("XOR:");
+print(resultado_xor);
+print("Shift Left:");
+print(resultado_shift_left);

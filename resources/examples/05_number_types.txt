@@ -1,0 +1,20 @@
+// Exemplo 5: Tipos de Números
+
+// Decimal
+dec = 42;
+
+// Binário
+bin = 0b101010;
+
+// Hexadecimal
+hex = 0x2A;
+
+// Float
+pi = 3.14159;
+e = 2.71828;
+
+print(dec);
+print(bin);
+print(hex);
+print(pi);
+print(e);
