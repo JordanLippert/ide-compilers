@@ -1,6 +1,9 @@
 package br.compiler.adapter;
 
+import br.compiler.gals.*;
 import br.compiler.model.CompilationResult;
+
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,9 +14,15 @@ import java.util.List;
  * @author Jordan Lippert
  * @author André Melo
  */
-public class GalsParserAdapter implements GalsAdapter {
-    
+public class GalsParserAdapter implements IGalsAdapter {
     private List<Object> tokens = new ArrayList<>();
+    private final Semantico _semantico;
+    private final Sintatico _sintatico;
+
+    public GalsParserAdapter(Sintatico sintatico, Semantico semantico) {
+        this._sintatico = sintatico;
+        this._semantico = semantico;
+    }
     
     @Override
     public CompilationResult performLexicalAnalysis(String sourceCode) {
@@ -23,9 +32,17 @@ public class GalsParserAdapter implements GalsAdapter {
     }
     
     @Override
-    public CompilationResult performSyntacticAnalysis(String sourceCode) {
-        // TODO: Implementar quando classes GALS forem geradas
-        // Por enquanto, apenas simula sucesso
+    public CompilationResult performSyntacticAnalysis(String sourceCode) throws LexicalError, SyntacticError, SemanticError {
+        Lexico lexico = new Lexico(sourceCode);
+
+        try {
+
+        _sintatico.parse(lexico, _semantico);
+        } catch (Exception e) {
+            throw e;
+        }
+
+        // TODO: add return data in the compilation result to display in console
         return CompilationResult.success();
     }
     

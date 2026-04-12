@@ -1,0 +1,330 @@
+#Options
+GenerateScanner = true
+GenerateParser = true
+Language = Java
+ScannerName = Lexico
+ParserName = Sintatico
+SemanticName = Semantico
+Package = br.compiler.gals
+ScannerCaseSensitive = true
+ScannerTable = Compact
+Input = String
+Parser = SLR
+#RegularDefinitions
+
+#Tokens
+:[\n\t\r\s]
+
+// COMMENTS
+line_comment: [/][/][^\n\r]*
+block_comment: "/*" ([^"*"]|"*"[^/])* "*/"
+
+// IDENTIFIERS AND KEYWORDS
+variable: [a-za-z_][a-za-z0-9_]*
+
+char = variable : "char"
+string = variable : "string"
+bool = variable : "bool"
+short = variable : "short"
+int = variable : "int"
+long = variable : "long"
+float = variable : "float"
+double = variable : "double"
+decimal = variable : "decimal"
+
+if = variable : "if"
+elif = variable : "elif"
+else = variable : "else"
+while = variable : "while"
+for = variable : "for"
+do = variable : "do"
+return = variable : "return"
+
+read = variable : "read"
+write = variable : "write"
+
+// LITERALS
+number: [0-9]+
+binary_number: 0b[01]+
+hex_number: 0x[0-9a-fa-f]+
+real_number: [0-9]+\.[0-9]+
+char_literal: '[^']'
+string_literal: \"[^\"]*\"
+true: "true"
+false: "false"
+null: "null"
+
+// OPERATORS
+bit_shift_left: "<<"
+bit_shift_right: ">>"
+bit_and: "&"
+bit_or: "|"
+bit_xor: "^"
+bit_not: "~"
+
+and: "&&"
+or: "||"
+not: "!"
+
+greater_than: ">"
+less_than: "<"
+greater_equal: ">="
+less_equal: "<="
+equality: "=="
+inequality: "!="
+
+equals: "="
+addition: "+"
+subtraction: "-"
+multiplication: "*"
+division: "/"
+remainder: "%"
+
+increment: "++"
+decrement: "--"
+
+addition_equals: "+="
+subtraction_equals: "-="
+multiplication_equals: "*="
+division_equals: "/="
+modulus_equals: "%="
+
+// PARENTHESES, BRACKETS, BRACES
+open_parentheses: "("
+close_parentheses: ")"
+open_bracket: "["
+close_bracket: "]"
+open_brace: "{"
+close_brace: "}"
+comma: ","
+colon: ":"
+dot: "."
+semicolon: ";"
+
+empty: "Í"
+void = variable : "void"
+#NonTerminals
+<program>
+<statement>
+<statement_list>
+<comment>
+<variable_type>
+<variable_access>
+<variable_declaration>
+<declarator_list>
+<declarator>
+<vector_declaration_opt>
+<vector_initializer_opt>
+<vector_initializer>
+<vector_initializer_list>
+<variable_assignment>
+<conditional_statement>
+<loop_statement>
+<while_loop>
+<do_while_loop>
+<for_loop>
+<for_init>
+<for_update>
+<function_definition>
+<parameter_list_opt>
+<parameter_list>
+<parameter>
+<function_call>
+<argument_list>
+<argument>
+<expression>
+<logical_or>
+<logical_and>
+<equality>
+<relational>
+<shift>
+<additive>
+<multiplicative>
+<unary_expression>
+<prefix_unary>
+<primary>
+<literal>
+<assignment_operator>
+<block>
+<input_statement>
+<input_list>
+<output_statement>
+<output_list>
+<output_item>
+#Grammar
+<program> ::= <statement_list>;
+
+<statement> ::= 
+      <variable_declaration> semicolon
+    | <variable_assignment> semicolon
+    | <expression> semicolon
+    | return <expression> semicolon #8
+    | <conditional_statement>
+    | <loop_statement>
+    | <input_statement>
+    | <output_statement>
+    | <function_definition>
+    | <comment>;
+    
+<statement_list> ::= 
+    <statement_list> <statement>
+  | <statement>;
+    
+<comment> ::= 
+     line_comment
+    | block_comment;
+    
+<variable_type> ::= bool | short | int | long | float | double | decimal | char | string;
+
+<variable_access> ::= 
+    variable #1
+  | variable open_bracket <expression> close_bracket #2;
+
+<variable_declaration> ::= <variable_type> <declarator_list>;
+<declarator_list> ::= <declarator> | <declarator_list> comma <declarator>;
+<declarator> ::=
+      variable #3
+    | variable #3 equals <expression> #4
+    | variable #3 open_bracket <vector_declaration_opt> close_bracket <vector_initializer_opt> #5;
+<vector_declaration_opt> ::= <expression> | empty;
+<vector_initializer_opt> ::= equals <vector_initializer> | empty;
+<vector_initializer> ::= 
+      open_brace close_brace
+    | open_brace <vector_initializer_list> close_brace
+    | string_literal;
+<vector_initializer_list> ::= 
+      <vector_initializer_list> comma <expression>
+    | <expression>;
+
+<variable_assignment> ::= <variable_access> <assignment_operator> <expression> #5;
+
+<conditional_statement> ::= 
+      if open_parentheses <expression> close_parentheses <block>
+    | if open_parentheses <expression> close_parentheses <block> else <block>;
+
+<loop_statement> ::= 
+  <while_loop>
+ | <do_while_loop>
+ | <for_loop>;
+
+<while_loop> ::= while open_parentheses <expression> close_parentheses <block>;
+
+<do_while_loop> ::= do <block> while open_parentheses <expression> close_parentheses semicolon;
+
+<for_loop> ::= for open_parentheses <for_init> semicolon <expression> semicolon <for_update> close_parentheses <block>;
+
+<for_init> ::= 
+  <variable_declaration> 
+  | empty;
+
+<for_update> ::= 
+  <expression>
+  | <expression> comma <for_update>
+  | empty;
+
+<function_definition> ::= 
+   void variable open_parentheses <parameter_list_opt> close_parentheses <block> #33
+  | <variable_type> variable open_parentheses <parameter_list_opt> close_parentheses <block> #34;
+
+<parameter_list_opt> ::= <parameter_list> | empty;
+<parameter_list> ::= <parameter> | <parameter_list> comma <parameter>;
+<parameter> ::= <variable_type> variable #35 | <variable_type> variable open_bracket close_bracket;
+
+<function_call> ::= 
+  variable open_parentheses close_parentheses #31
+  | variable open_parentheses <argument_list> close_parentheses #32;
+
+<argument_list> ::= <argument> | <argument_list> comma <argument>;
+<argument> ::= <expression>;
+
+<expression> ::= <logical_or>;
+
+<logical_or> ::=
+      <logical_or> or <logical_and> #24
+    | <logical_and>;
+
+<logical_and> ::=
+      <logical_and> and <equality> #23
+    | <equality>;
+
+<equality> ::= <equality> equality <relational>
+             | <equality> inequality <relational>
+             | <relational>;
+
+<relational> ::=
+      <relational> greater_than <shift> #19
+    | <relational> less_than <shift> #20
+    | <relational> greater_equal <shift> #21
+    | <relational> less_equal <shift> #22
+    | <shift>;
+
+<shift> ::= <shift> bit_shift_left <additive>
+           | <shift> bit_shift_right <additive>
+           | <additive>;
+
+<additive> ::=
+      <additive> addition <multiplicative> #14
+    | <additive> subtraction <multiplicative> #15
+    | <multiplicative>;
+
+<multiplicative> ::=
+      <multiplicative> multiplication <unary_expression> #16
+    | <multiplicative> division <unary_expression> #17
+    | <multiplicative> remainder <unary_expression> #18
+    | <unary_expression>;
+
+<unary_expression> ::= <prefix_unary> <unary_expression>
+                     | <primary>;
+
+<prefix_unary> ::= 
+  not #25
+  | bit_not #26
+  | addition #27
+  | subtraction #28
+  | increment #29
+  | decrement #30;
+
+<primary> ::= 
+    <literal>
+  | <variable_access>
+  | <function_call>
+  | open_parentheses <expression> close_parentheses;
+
+<literal> ::=
+      number #9
+    | binary_number #9
+    | hex_number #9
+    | real_number #9
+    | char_literal #10
+    | string_literal #11
+    | true #12
+    | false #12
+    | null #13;
+
+<assignment_operator> ::=
+  equals 
+   | addition_equals
+   | subtraction_equals
+   | multiplication_equals
+   | division_equals
+   | modulus_equals;
+
+<block> ::= open_brace close_brace | open_brace <statement_list> close_brace;
+
+<input_statement> ::= read open_parentheses <input_list> close_parentheses semicolon #6;
+
+<input_list> ::= 
+    <variable_access>
+    | <variable_access> comma <input_list>
+    | empty;
+
+<output_statement> ::= write open_parentheses <output_list> close_parentheses semicolon #7;
+
+<output_list> ::= 
+    <output_item> 
+    | <output_item> comma <output_list>
+    | empty;
+
+<output_item> ::= 
+    <variable_access>
+  | <literal>;

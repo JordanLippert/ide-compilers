@@ -16,7 +16,7 @@ import java.util.List;
  */
 public class CompilationEngine {
     
-    private final List<CompilationPhase> phases = new ArrayList<>();
+    private final List<ICompilationPhase> phases = new ArrayList<>();
     private final ErrorHandler errorHandler;
     
     public CompilationEngine() {
@@ -36,7 +36,7 @@ public class CompilationEngine {
         return lexical;
     }
     
-    public void addPhase(CompilationPhase phase) {
+    public void addPhase(ICompilationPhase phase) {
         phases.add(phase);
     }
     
@@ -45,7 +45,7 @@ public class CompilationEngine {
             return CompilationResult.error("VALIDATION", "Código fonte vazio", 0);
         }
         
-        for (CompilationPhase phase : phases) {
+        for (ICompilationPhase phase : phases) {
             try {
                 CompilationResult result = phase.execute(sourceCode);
                 
@@ -62,7 +62,7 @@ public class CompilationEngine {
         return CompilationResult.success();
     }
     
-    public List<CompilationPhase> getPhases() {
+    public List<ICompilationPhase> getPhases() {
         return new ArrayList<>(phases);
     }
 }

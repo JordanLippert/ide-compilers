@@ -1,6 +1,6 @@
 package br.compiler.compiler;
 
-import br.compiler.adapter.GalsAdapter;
+import br.compiler.adapter.IGalsAdapter;
 import br.compiler.model.CompilationResult;
 
 /**
@@ -9,11 +9,11 @@ import br.compiler.model.CompilationResult;
  * @author Jordan Lippert
  * @author André Melo
  */
-public class LexicalPhase implements CompilationPhase {
+public class LexicalPhase implements ICompilationPhase {
     
-    private final GalsAdapter adapter;
+    private final IGalsAdapter adapter;
     
-    public LexicalPhase(GalsAdapter adapter) {
+    public LexicalPhase(IGalsAdapter adapter) {
         this.adapter = adapter;
     }
     

@@ -1,10 +1,13 @@
 package br.compiler.factory;
 
-import br.compiler.adapter.GalsAdapter;
+import br.compiler.adapter.IGalsAdapter;
 import br.compiler.adapter.GalsParserAdapter;
 import br.compiler.compiler.CompilationEngine;
 import br.compiler.compiler.LexicalPhase;
 import br.compiler.compiler.SyntacticPhase;
+import br.compiler.gals.Semantico;
+import br.compiler.gals.Sintatico;
+import br.compiler.ide.ConsolePanel;
 
 /**
  * Factory para criação de parsers e engine de compilação
@@ -14,14 +17,17 @@ import br.compiler.compiler.SyntacticPhase;
  */
 public class ParserFactory {
     
-    public static GalsAdapter createGalsAdapter() {
-        return new GalsParserAdapter();
+    public static IGalsAdapter createGalsAdapter() {
+        Sintatico sintatico = new Sintatico();
+        Semantico semantico = new Semantico();
+        return new GalsParserAdapter(sintatico, semantico);
     }
     
     public static CompilationEngine createCompilationEngine() {
         CompilationEngine engine = new CompilationEngine();
-        GalsAdapter adapter = createGalsAdapter();
-        
+
+        IGalsAdapter adapter = createGalsAdapter();
+
         engine.addPhase(new LexicalPhase(adapter));
         engine.addPhase(new SyntacticPhase(adapter));
         

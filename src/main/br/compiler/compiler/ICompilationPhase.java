@@ -1,5 +1,8 @@
 package br.compiler.compiler;
 
+import br.compiler.gals.LexicalError;
+import br.compiler.gals.SemanticError;
+import br.compiler.gals.SyntacticError;
 import br.compiler.model.CompilationResult;
 
 /**
@@ -8,14 +11,14 @@ import br.compiler.model.CompilationResult;
  * @author Jordan Lippert
  * @author André Melo
  */
-public interface CompilationPhase {
+public interface ICompilationPhase {
     
     /**
      * Executa uma fase da compilação
      * @param sourceCode código fonte
      * @return resultado da compilação
      */
-    CompilationResult execute(String sourceCode);
+    CompilationResult execute(String sourceCode) throws LexicalError, SyntacticError, SemanticError;
     
     /**
      * Retorna o nome da fase

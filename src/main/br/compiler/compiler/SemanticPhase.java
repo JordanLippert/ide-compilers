@@ -1,6 +1,7 @@
 package br.compiler.compiler;
 
-import br.compiler.adapter.GalsAdapter;
+import br.compiler.adapter.IGalsAdapter;
+import br.compiler.gals.Semantico;
 import br.compiler.model.CompilationResult;
 
 /**
@@ -9,11 +10,11 @@ import br.compiler.model.CompilationResult;
  * @author Jordan Lippert
  * @author André Melo
  */
-public class SemanticPhase implements CompilationPhase {
+public class SemanticPhase implements ICompilationPhase {
     
-    private final GalsAdapter adapter;
+    private final IGalsAdapter adapter;
     
-    public SemanticPhase(GalsAdapter adapter) {
+    public SemanticPhase(IGalsAdapter adapter) {
         this.adapter = adapter;
     }
     
