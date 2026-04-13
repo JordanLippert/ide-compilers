@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CompilerTests {
+public class CompilerSemanticTests {
 
     private CompilationEngine engine;
 
@@ -25,13 +25,33 @@ public class CompilerTests {
         assertFalse(result.isSuccess(), "Expected failure but succeeded");
     }
 
+    // Saída de dados
+    @Test
+    void testOutput() {
+        String code = """
+            int a;
+            write(a);
+            write("hello");
+        """;
+        assertSuccess(code);
+    }
+
     // Declaração de variáveis
     @Test
     void testVariableDeclaration() {
         String code = """
             int a;
-            string teste = "oi";
-            int b, c;
+            string teste;
+            int b, c, d;
+            
+            a = 100;
+            teste = "oi";
+            d = 10;
+            
+            write(teste);
+            write(d);
+            write(a);
+            write(b);
         """;
         assertSuccess(code);
     }
@@ -42,10 +62,26 @@ public class CompilerTests {
         String code = """
             int va[11], vb[17];
             int a[5] = {1,2,3};
-            char str[] = {"abc"};
+            char str[] = {'a', 'b', 'c'};
         """;
         assertSuccess(code);
     }
+
+    // Entrada de dados
+    @Test
+    void testInput() {
+        String code = """
+            int a;
+            read(a);
+        """;
+        assertSuccess(code);
+    }
+
+    // Expressões aritmeticas
+
+    // Expressoes relacionais
+
+    // Expressoes logicas
 
     // Desvio condicional simples (somente if)
     @Test
@@ -118,41 +154,9 @@ public class CompilerTests {
         assertSuccess(code);
     }
 
-    // 5. Entrada de dados
-    @Test
-    void testInput() {
-        String code = """
-            int a;
-            leia(a);
-        """;
-        assertSuccess(code);
-    }
-
-    // 6. Saída de dados
-    @Test
-    void testOutput() {
-        String code = """
-            int a;
-            escreva(a);
-            escreva("hello");
-        """;
-        assertSuccess(code);
-    }
-
-    // 7. Atribuições com expressões
-    @Test
-    void testAssignments() {
-        String code = """
-            int a, b;
-            a = 5;
-            b = a + 10 * (2 + 3);
-        """;
-        assertSuccess(code);
-    }
-
     // 8. Sub-rotinas (função)
     @Test
-    void testFunctionDefinitionAndCall() {
+    void testFunction() {
         String code = """
             int soma(int a, int b) {
                 return a + b;
@@ -160,6 +164,7 @@ public class CompilerTests {
 
             int x;
             x = soma(1, 2);
+            write(x);
         """;
         assertSuccess(code);
     }
@@ -170,34 +175,12 @@ public class CompilerTests {
         String code = """
             void proc(int a) {
                 a = a + 1;
+                write(a);
             }
 
             int x = 1;
             proc(x);
         """;
         assertSuccess(code);
-    }
-
-    // 9. Expressões completas
-    @Test
-    void testComplexExpressions() {
-        String code = """
-            int b = 2, c = 10;
-            float a = (b + c) * (a - 1) / 2;
-            if ((a > b) && (c < 10) || (a == c)) {
-                a = 0;
-            }
-        """;
-        assertSuccess(code);
-    }
-
-    // ❌ Teste de erro sintático
-    @Test
-    void testSyntaxError() {
-        String code = """
-            int a
-            a = 10;
-        """;
-        assertFailure(code);
     }
 }

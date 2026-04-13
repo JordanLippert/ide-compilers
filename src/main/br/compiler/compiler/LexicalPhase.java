@@ -1,6 +1,9 @@
 package br.compiler.compiler;
 
 import br.compiler.adapter.IGalsAdapter;
+import br.compiler.gals.LexicalError;
+import br.compiler.gals.SemanticError;
+import br.compiler.gals.SyntacticError;
 import br.compiler.model.CompilationResult;
 
 /**
@@ -18,8 +21,8 @@ public class LexicalPhase implements ICompilationPhase {
     }
     
     @Override
-    public CompilationResult execute(String sourceCode) {
-        return adapter.performLexicalAnalysis(sourceCode);
+    public CompilationResult execute(String sourceCode) throws LexicalError, SyntacticError, SemanticError {
+        return adapter.performSyntacticAnalysis(sourceCode);
     }
     
     @Override

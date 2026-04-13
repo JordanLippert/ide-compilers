@@ -34,18 +34,12 @@ public class GalsParserAdapter implements IGalsAdapter {
     @Override
     public CompilationResult performSyntacticAnalysis(String sourceCode) throws LexicalError, SyntacticError, SemanticError {
         Lexico lexico = new Lexico(sourceCode);
-
-        try {
-
         _sintatico.parse(lexico, _semantico);
-        } catch (Exception e) {
-            throw e;
-        }
 
         // TODO: add return data in the compilation result to display in console
         return CompilationResult.success();
     }
-    
+
     @Override
     public List<Object> getTokens() {
         return new ArrayList<>(tokens);

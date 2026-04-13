@@ -73,7 +73,6 @@ public interface Constants extends ScannerConstants, ParserConstants
     int t_colon = 67;
     int t_dot = 68;
     int t_semicolon = 69;
-    int t_empty = 70;
-    int t_void = 71;
+    int t_void = 70;
 
 }

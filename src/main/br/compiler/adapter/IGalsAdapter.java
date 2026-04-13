@@ -19,7 +19,7 @@ public interface IGalsAdapter {
      * @param sourceCode código fonte a ser analisado
      * @return resultado da compilação
      */
-    CompilationResult performLexicalAnalysis(String sourceCode);
+    CompilationResult performLexicalAnalysis(String sourceCode) throws LexicalError, SyntacticError, SemanticError;
     
     /**
      * Realiza análise sintática do código fonte

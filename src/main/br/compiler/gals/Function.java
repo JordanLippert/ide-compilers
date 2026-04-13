@@ -2,14 +2,14 @@ package br.compiler.gals;
 
 import java.util.List;
 
-class Function {
+abstract class Function {
     String name;
-    List<String> params;
-    boolean hasReturn;
+    int numberOfParameters;
 
-    public Function(String name, List<String> params, boolean hasReturn) {
+    public Function(String name, int numberOfParameters) {
         this.name = name;
-        this.params = params;
-        this.hasReturn = hasReturn;
+        this.numberOfParameters = numberOfParameters;
     }
+
+    abstract Object execute(List<Object> args) throws SemanticError;
 }

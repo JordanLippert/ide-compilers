@@ -1,393 +1,179 @@
 package br.compiler.gals;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Stack;
 
-public class Semantico implements Constants {
-
-    private final HashMap<String, Object> variables = new HashMap<>();
+public class Semantico implements Constants
+{
     private final Stack<Object> stack = new Stack<>();
 
+    // Variables
+    private final HashMap<String, Variable> variables = new HashMap<>();
+    private Type currentVariableType;
+    private String currentVariableName;
+
+    // Functions
+    private Stack<String> argumnents = new Stack<>();
     private final HashMap<String, Function> functions = new HashMap<>();
-    private final List<String> currentParams = new ArrayList<>();
+    private String currentFunctionName;
 
-    private String currentVar;
+    // Arrays
+    private boolean isArray = false;
+    private Integer arraySize;
 
-    private final Stack<Boolean> executionStack = new Stack<>();
-
-    private boolean isExecuting() {
-        return executionStack.isEmpty() || executionStack.peek();
-    }
-
-    // 🔥 SAFE STACK OPS
-    private Object safePop() {
-        return stack.isEmpty() ? 0.0 : stack.pop();
-    }
-
-    private void pushDummy() {
-        stack.push(0.0);
-    }
-
-    public void executeAction(int action, Token token) throws SemanticError {
-
+    public void executeAction(int action, Token token)	throws SemanticError
+    {
         switch (action) {
+            case 0: // clear context
+            {
+                currentVariableName = null;
+                currentVariableType = null;
+                isArray = false;
+                arraySize = null;
+                break;
+            }
+            case 1: // push literal to stack
+            {
+                Object literal = token.getLexeme();
+                stack.push(literal);
+                break;
+            }
+            case 2: // get variable/function type
+            {
+                currentVariableType = Type.FromString(token.getLexeme());
+                break;
+            }
+            case 3: // get name of the variable
+            {
+                currentVariableName = token.getLexeme();
+                break;
+            }
+            case 4: // add variable to variables map
+            {
+                Variable var = new Variable(currentVariableType, null, isArray);
 
-            // =========================
-            // VARIABLES / ACCESS
-            // =========================
-
-            case 1: {
-                if (!isExecuting()) {
-                    pushDummy();
-                    break;
+                if (isArray && arraySize != null) {
+                    var.setArraySize(arraySize);
                 }
 
-                String name = token.getLexeme();
-
-                if (!variables.containsKey(name))
-                    throw new SemanticError("Variable not declared: " + name);
-
-                stack.push(variables.get(name));
+                variables.put(currentVariableName, var);
                 break;
             }
+            case 5: // store function name
+            {
+                currentFunctionName = token.getLexeme();
+                break;
+            }
+            case 6: // store function arguments
+            {
+                String argument = token.getLexeme();
+                argumnents.push(argument);
+                break;
+            }
+            case 7: // function call
+            {
+                List<Object> args = new ArrayList<>();
 
-            case 2: {
-                Object indexObj = safePop();
-
-                if (!isExecuting()) {
-                    pushDummy();
-                    break;
+                while (!argumnents.isEmpty()) {
+                    String argument = argumnents.pop();
+                    Object value = variables.get(argument).getValue();
+                    args.add(0, value);
                 }
 
-                int index = (int) toDouble(indexObj);
-                String name = token.getLexeme();
+                Function function = functions.get(currentFunctionName);
 
-                Object arr = variables.get(name);
+                if (function == null)
+                    throw new SemanticError("Function not found: " + currentFunctionName);
 
-                if (!(arr instanceof Object[]))
-                    throw new SemanticError("Not a vector: " + name);
+                if (args.size() != function.numberOfParameters)
+                    throw new SemanticError("Invalid number of arguments");
 
-                stack.push(((Object[]) arr)[index]);
-                break;
-            }
+                Object result = function.execute(args);
 
-            // =========================
-            // DECLARATION
-            // =========================
-
-            case 3: {
-                if (!isExecuting()) break;
-                currentVar = token.getLexeme();
-                variables.put(currentVar, null);
-                break;
-            }
-
-            case 4: {
-                Object value = safePop();
-                if (!isExecuting()) break;
-                variables.put(currentVar, value);
-                break;
-            }
-
-            case 5: {
-                Object value = safePop();
-                if (!isExecuting()) break;
-
-                if (value instanceof String str) {
-                    Character[] arr = new Character[str.length() + 1];
-                    for (int i = 0; i < str.length(); i++)
-                        arr[i] = str.charAt(i);
-                    arr[str.length()] = '\0';
-                    variables.put(currentVar, arr);
-                    break;
-                }
-
-                if (value instanceof List<?> list) {
-                    variables.put(currentVar, list.toArray());
-                    break;
-                }
-
-                variables.put(currentVar, new Object[0]);
-                break;
-            }
-
-            // =========================
-            // IO
-            // =========================
-
-            case 6: {
-                if (!isExecuting()) {
-                    safePop();
-                    break;
-                }
-
-                Scanner sc = new Scanner(System.in);
-                Object var = safePop();
-
-                if (var instanceof String name && variables.containsKey(name)) {
-                    System.out.print("Input for " + name + ": ");
-                    variables.put(name, sc.nextDouble());
-                }
-                break;
-            }
-
-            case 7: {
-                Object val = safePop();
-                if (!isExecuting()) break;
-                System.out.println(val);
-                break;
-            }
-
-            case 8: {
-                Object val = safePop();
-                if (!isExecuting()) break;
-                System.out.println("RETURN: " + val);
-                break;
-            }
-
-            // =========================
-            // LITERALS
-            // =========================
-
-            case 9: stack.push(Double.parseDouble(token.getLexeme())); break;
-            case 10: stack.push(token.getLexeme().charAt(0)); break;
-            case 11: stack.push(token.getLexeme()); break;
-            case 12: stack.push(Boolean.parseBoolean(token.getLexeme())); break;
-            case 13: stack.push(null); break;
-
-            // =========================
-            // ARITHMETIC
-            // =========================
-
-            case 14: {
-                Object a = safePop(), b = safePop();
-                if (!isExecuting()) { pushDummy(); break; }
-                stack.push(toDouble(b) + toDouble(a));
-                break;
-            }
-
-            case 15: {
-                Object a = safePop(), b = safePop();
-                if (!isExecuting()) { pushDummy(); break; }
-                stack.push(toDouble(b) - toDouble(a));
-                break;
-            }
-
-            case 16: {
-                Object a = safePop(), b = safePop();
-                if (!isExecuting()) { pushDummy(); break; }
-                stack.push(toDouble(b) * toDouble(a));
-                break;
-            }
-
-            case 17: {
-                Object a = safePop(), b = safePop();
-                if (!isExecuting()) { pushDummy(); break; }
-                stack.push(toDouble(b) / toDouble(a));
-                break;
-            }
-
-            case 18: {
-                Object a = safePop(), b = safePop();
-                if (!isExecuting()) { pushDummy(); break; }
-                stack.push(toDouble(b) % toDouble(a));
-                break;
-            }
-
-            // =========================
-            // RELATIONAL
-            // =========================
-
-            case 19: {
-                Object a = safePop(), b = safePop();
-                if (!isExecuting()) { stack.push(false); break; }
-                stack.push(toDouble(b) > toDouble(a));
-                break;
-            }
-
-            case 20: {
-                Object a = safePop(), b = safePop();
-                if (!isExecuting()) { stack.push(false); break; }
-                stack.push(toDouble(b) < toDouble(a));
-                break;
-            }
-
-            case 21: {
-                Object a = safePop(), b = safePop();
-                if (!isExecuting()) { stack.push(false); break; }
-                stack.push(toDouble(b) >= toDouble(a));
-                break;
-            }
-
-            case 22: {
-                Object a = safePop(), b = safePop();
-                if (!isExecuting()) { stack.push(false); break; }
-                stack.push(toDouble(b) <= toDouble(a));
-                break;
-            }
-
-            // =========================
-            // LOGICAL
-            // =========================
-
-            case 23: {
-                Object a = safePop(), b = safePop();
-                if (!isExecuting()) { stack.push(false); break; }
-                stack.push((Boolean) b && (Boolean) a);
-                break;
-            }
-
-            case 24: {
-                Object a = safePop(), b = safePop();
-                if (!isExecuting()) { stack.push(false); break; }
-                stack.push((Boolean) b || (Boolean) a);
-                break;
-            }
-
-            // =========================
-            // UNARY
-            // =========================
-
-            case 25: {
-                Object a = safePop();
-                if (!isExecuting()) { stack.push(false); break; }
-                stack.push(!(Boolean) a);
-                break;
-            }
-
-            case 26: {
-                Object a = safePop();
-                if (!isExecuting()) { pushDummy(); break; }
-                stack.push(~(int) toDouble(a));
-                break;
-            }
-
-            case 27: break;
-
-            case 28: {
-                Object a = safePop();
-                if (!isExecuting()) { pushDummy(); break; }
-                stack.push(-toDouble(a));
-                break;
-            }
-
-            case 29: {
-                if (!isExecuting()) break;
-                String name = token.getLexeme();
-                variables.put(name, toDouble(variables.get(name)) + 1);
-                break;
-            }
-
-            case 30: {
-                if (!isExecuting()) break;
-                String name = token.getLexeme();
-                variables.put(name, toDouble(variables.get(name)) - 1);
-                break;
-            }
-
-            // =========================
-            // FUNCTIONS
-            // =========================
-
-            case 31: stack.push(null); break;
-
-            case 32: {
-                String name = token.getLexeme();
-                if (!functions.containsKey(name))
-                    throw new SemanticError("Function not declared: " + name);
-
-                Function f = functions.get(name);
-                for (int i = 0; i < f.params.size(); i++) safePop();
-
-                stack.push(null);
-                break;
-            }
-
-            case 33:
-            case 34: {
-                functions.put(token.getLexeme(),
-                        new Function(token.getLexeme(), new ArrayList<>(currentParams), action == 34));
-                currentParams.clear();
-                break;
-            }
-
-            case 35: currentParams.add(token.getLexeme()); break;
-
-            case 36: {
-                Object value = safePop();
-                if (!isExecuting()) break;
-
-                String name = token.getLexeme();
-                if (!variables.containsKey(name))
-                    throw new SemanticError("Variable not declared: " + name);
-
-                variables.put(name, value);
-                break;
-            }
-
-            // =========================
-            // CONTROL FLOW
-            // =========================
-
-            case 40: {
-                boolean cond = toBoolean(safePop());
-
-                if (!isExecuting())
-                    executionStack.push(false);
-                else
-                    executionStack.push(cond);
+                if (result != null)
+                    stack.push(result);
 
                 break;
             }
+            case 8: // initialize variable value
+            {
+                if (currentVariableName == null)
+                    throw new SemanticError("No variable selected");
 
-            case 41: {
-                boolean last = executionStack.pop();
+                Object rawValue = stack.pop();
 
-                if (!isExecuting())
-                    executionStack.push(false);
-                else
-                    executionStack.push(!last);
+                Object typedValue = convertToType(rawValue, currentVariableType);
 
+                variables.get(currentVariableName).setValue(typedValue);
                 break;
             }
+            case 9: // assign value to variable
+            {
+                if (currentVariableName == null)
+                    throw new SemanticError("No variable selected");
 
-            case 46: {
-                if (!executionStack.isEmpty())
-                    executionStack.pop();
+                Variable variable = variables.get(currentVariableName);
+
+                Object rawValue = stack.pop();
+                Object typedValue = convertToType(rawValue, variable.getType());
+
+                variable.setValue(typedValue);
                 break;
             }
-
-            // =========================
-            // VECTOR INIT
-            // =========================
-
-            case 50: {
-                List<Object> list = new ArrayList<>();
-                list.add(safePop());
-                stack.push(list);
+            case 10: // array with size
+            {
+                isArray = true;
+                Object size = stack.pop();
+                arraySize = Integer.parseInt(size.toString());
                 break;
             }
-
-            case 51: {
-                Object value = safePop();
-                List<Object> list = (List<Object>) safePop();
-                list.add(value);
-                stack.push(list);
+            case 11: // array without size
+            {
+                isArray = true;
+                arraySize = null;
                 break;
             }
+            case 12: // array assignment
+            {
+                Object value = stack.pop();   // value
+                Object indexObj = stack.pop(); // index
 
+                int index = Integer.parseInt(indexObj.toString());
+
+                Variable var = variables.get(currentVariableName);
+
+                if (!var.isArray())
+                    throw new SemanticError("Not an array");
+
+                var.setArrayValue(index, convertToType(value, var.getType()));
+                break;
+            }
             default:
-                throw new SemanticError("Unknown action: " + action);
+                throw new SemanticError("Semantico: Invalid action " + action);
+        }
+    }
+
+    private Object convertToType(Object value, Type type) throws SemanticError {
+
+        try {
+            return switch (type) {
+                case Type.INT -> (int) Double.parseDouble(value.toString());
+                case Type.DOUBLE, Type.FLOAT -> Double.parseDouble(value.toString());
+                case Type.BOOL -> toBoolean(value);
+                case Type.CHAR -> value.toString().charAt(0);
+                case Type.STRING -> value.toString();
+                default -> throw new SemanticError("Unknown type: " + type);
+            };
+        } catch (Exception e) {
+            throw new SemanticError("Type conversion error: " + value + " -> " + type);
         }
     }
 
     private boolean toBoolean(Object o) {
         if (o instanceof Boolean b) return b;
         if (o instanceof Number n) return n.doubleValue() != 0;
-        if (o == null) return false;
         return Boolean.parseBoolean(o.toString());
-    }
-
-    private double toDouble(Object o) {
-        return Double.parseDouble(o.toString());
     }
 }
