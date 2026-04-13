@@ -1,7 +1,10 @@
 package br.compiler.compiler;
 
 import br.compiler.adapter.IGalsAdapter;
+import br.compiler.gals.LexicalError;
+import br.compiler.gals.SemanticError;
 import br.compiler.gals.Semantico;
+import br.compiler.gals.SyntacticError;
 import br.compiler.model.CompilationResult;
 
 /**
@@ -19,9 +22,8 @@ public class SemanticPhase implements ICompilationPhase {
     }
     
     @Override
-    public CompilationResult execute(String sourceCode) {
-        // TODO: Implementar análise semântica futuramente
-        return CompilationResult.success();
+    public CompilationResult execute(String sourceCode) throws LexicalError, SyntacticError, SemanticError {
+        return adapter.performSyntacticAnalysis(sourceCode);
     }
     
     @Override

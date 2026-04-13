@@ -22,7 +22,7 @@ public class LexicalPhase implements ICompilationPhase {
     
     @Override
     public CompilationResult execute(String sourceCode) throws LexicalError, SyntacticError, SemanticError {
-        return adapter.performSyntacticAnalysis(sourceCode);
+        return adapter.performLexicalAnalysis(sourceCode);
     }
     
     @Override

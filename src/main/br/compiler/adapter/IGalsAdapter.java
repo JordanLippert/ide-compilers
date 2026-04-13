@@ -27,7 +27,14 @@ public interface IGalsAdapter {
      * @return resultado da compilação
      */
     CompilationResult performSyntacticAnalysis(String sourceCode) throws LexicalError, SyntacticError, SemanticError;
-    
+
+    /**
+     * Realiza análise semántica do código fonte
+     * @param sourceCode código fonte a ser analisado
+     * @return resultado da compilação
+     */
+    CompilationResult performSemanticAnalysis(String sourceCode) throws LexicalError, SyntacticError, SemanticError;
+
     /**
      * Obtém os tokens gerados pela análise léxica
      * @return lista de tokens
