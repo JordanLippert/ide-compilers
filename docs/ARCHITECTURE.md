@@ -123,8 +123,9 @@ Erro detectado → LexicalErrorHandler → SyntacticErrorHandler
 5. LexicalPhase processa através do GalsParserAdapter
 6. Se houver erros:
    a. Erro passa pelo Chain of Responsibility
-   b. ErrorFormatter formata a mensagem
-   c. Mensagem é exibida no ConsolePanel
+   b. Para erro sintático, o `GalsParserAdapter` enriquece a mensagem com token encontrado e tokens esperados
+   c. ErrorFormatter formata a mensagem
+   d. Mensagem é exibida no ConsolePanel
 7. Se não houver erros léxicos:
    a. SyntacticPhase é executada
    b. Repete processo de erro se necessário

@@ -36,14 +36,14 @@
 
 #### Editar a Gramática
 
-1. Abra `trabalho_compiladores_01.gals` no GALS
+1. Abra `compiler_definition.gals` no GALS
 2. Faça as modificações necessárias (adicionar tokens, regras)
 3. Salve o arquivo
 
 #### Gerar Classes Java
 
 1. No GALS: **Options → Generate**
-2. Selecione o diretório: `src/br/compiler/gals/`
+2. Selecione o diretório: `src/main/compiler/gals/`
 3. Gere as classes
 4. **Importante:** As classes geradas **sobrescrevem** as antigas
 
@@ -52,6 +52,17 @@
 Após gerar, verifique se não há erros de compilação no IntelliJ.
 
 **Atenção:** Se a interface das classes GALS mudou, pode ser necessário ajustar o `GalsParserAdapter`.
+
+#### Estratégia para mensagens de erro (recomendada)
+
+- Trate `ParserConstants.PARSER_ERROR` como **mensagem base/fallback**.
+- Centralize a mensagem final no `GalsParserAdapter` com contexto de depuração:
+  - linha e coluna
+  - token encontrado
+  - lista de tokens esperados
+- Ao regenerar pelo GALS, revise rapidamente:
+  1. `ParserConstants.PARSER_ERROR`
+  2. `GalsParserAdapter` (extração de tokens esperados e formatação final)
 
 ---
 
@@ -67,8 +78,8 @@ Após gerar, verifique se não há erros de compilação no IntelliJ.
    - Gere as classes
 
 3. **Implemente na IDE (se necessário):**
-   - Componentes visuais em `br.compiler.ide`
-   - Lógica de negócio em `br.compiler.compiler`
+   - Componentes visuais em `compiler.ide`
+   - Lógica de negócio em `compiler.compiler`
 
 4. **Crie testes:**
    - Arquivo de exemplo em `resources/examples/`
@@ -110,7 +121,7 @@ git commit -m "refactor: extrai lógica de formatação de erros"
 
 ## 🏗️ Como Implementar Cada Componente
 
-### IDE Components (`br.compiler.ide`)
+### IDE Components (`compiler.ide`)
 
 #### CompilerIDE.java (Janela Principal)
 
@@ -210,7 +221,7 @@ public class ConsolePanel extends JPanel {
 
 ---
 
-### Compilation Engine (`br.compiler.compiler`)
+### Compilation Engine (`compiler.compiler`)
 
 #### CompilationEngine.java
 
@@ -263,7 +274,7 @@ public class CompilationEngine {
 
 ---
 
-### Adapter (`br.compiler.adapter`)
+### Adapter (`compiler.adapter`)
 
 #### GalsParserAdapter.java
 
