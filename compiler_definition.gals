@@ -139,6 +139,9 @@ void = variable : "void"
 <expression>
 <assignment>
 <logical>
+<bitwise_or>
+<bitwise_xor>
+<bitwise_and>
 <equality>
 <relational>
 <shift>
@@ -343,8 +346,15 @@ void = variable : "void"
 
 
 <logical> ::=
-      <logical> and <equality>
-    | <logical> or <equality>
+      <logical> and <bitwise_or>
+    | <logical> or <bitwise_or>
+    | <bitwise>;
+
+
+<bitwise> ::=
+      <bitwise> bit_or <equality>
+      <bitwise> bit_xor <equality>
+      <bitwise> bit_and <equality>
     | <equality>;
 
 

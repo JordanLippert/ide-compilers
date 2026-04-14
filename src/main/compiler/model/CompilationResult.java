@@ -84,6 +84,9 @@ public class CompilationResult {
         if (success) {
             return "Compilação bem-sucedida";
         } else {
+            if (errorMessage != null && errorMessage.contains("\n")) {
+                return String.format("Erro [%s]: %s\n(posição %d)", errorType, errorMessage, errorPosition);
+            }
             return String.format("Erro [%s]: %s (posição %d)", errorType, errorMessage, errorPosition);
         }
     }

@@ -21,6 +21,7 @@ public class GalsParserAdapter implements IGalsAdapter {
     private String sourceCode;
     private List<Token> tokens = new ArrayList<>();
     private static final int MAX_EXPECTED_TOKENS = 12;
+    private static final int MAX_EXPECTED_LINE_LENGTH = 90;
     private static final int MAX_TERMINAL_TOKEN_ID = resolveMaxTerminalTokenId();
     private static final Map<Integer, String> TOKEN_NAMES = buildTokenNames();
 
@@ -163,13 +164,13 @@ public class GalsParserAdapter implements IGalsAdapter {
 
         if (parserState >= 0) {
             return String.format(
-                "Erro sintático na linha %d, coluna %d: encontrado %s, esperado: %s. [estado %d]",
+                "Erro sintático na linha %d, coluna %d:\nencontrado %s.\nesperado:\n    %s\n[estado %d]",
                 line, column, found, expected, parserState
             );
         }
 
         return String.format(
-            "Erro sintático na linha %d, coluna %d: encontrado %s, esperado: %s.",
+            "Erro sintático na linha %d, coluna %d:\nencontrado %s.\nesperado:\n    %s",
             line, column, found, expected
         );
     }
@@ -269,12 +270,21 @@ public class GalsParserAdapter implements IGalsAdapter {
             return "token válido";
         }
 
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < expectedTokens.size(); i++) {
-            if (i > 0) {
-                builder.append(", ");
+        StringBuilder builder = new StringBuilder(expectedTokens.get(0));
+        int currentLineLength = expectedTokens.get(0).length();
+
+        for (int i = 1; i < expectedTokens.size(); i++) {
+            String token = expectedTokens.get(i);
+            String tokenWithSeparator = ", " + token;
+
+            if (currentLineLength + tokenWithSeparator.length() > MAX_EXPECTED_LINE_LENGTH) {
+                builder.append(",\n    ").append(token);
+                currentLineLength = 4 + token.length();
+                continue;
             }
-            builder.append(expectedTokens.get(i));
+
+            builder.append(tokenWithSeparator);
+            currentLineLength += tokenWithSeparator.length();
         }
 
         return builder.toString();
