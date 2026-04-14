@@ -1,6 +1,6 @@
-import br.compiler.compiler.CompilationEngine;
-import br.compiler.factory.ParserFactory;
-import br.compiler.model.CompilationResult;
+import compiler.compiler.CompilationEngine;
+import compiler.factory.ParserFactory;
+import compiler.model.CompilationResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

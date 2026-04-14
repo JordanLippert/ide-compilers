@@ -52,7 +52,7 @@ etc.
 
 1. Abra `trabalho_compiladores_01.gals` no GALS
 2. Menu: **Options → Generate**
-3. Diretório de saída: `src/br/compiler/gals/`
+3. Diretório de saída: `src/main/compiler/gals/`
 4. Gere as classes
 
 Isso criará:
@@ -69,7 +69,7 @@ Isso criará:
 
 ### 4. Atualizar o GalsParserAdapter
 
-Arquivo: `src/br/compiler/adapter/GalsParserAdapter.java`
+Arquivo: `src/main/compiler/adapter/GalsParserAdapter.java`
 
 Substitua o código TODO pelos métodos reais usando as classes GALS:
 

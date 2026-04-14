@@ -1,5 +1,5 @@
 
-import br.compiler.ide.CompilerIDE;
+import compiler.ide.CompilerIDE;
 
 import javax.swing.*;
 

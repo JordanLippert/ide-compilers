@@ -15,9 +15,9 @@ ide-compilers/
 │   └── DEVELOPMENT_GUIDE.md        # Guia de desenvolvimento
 │
 ├── src/                            # 💻 Código-fonte Java
-│   ├── Main.java                   # Entry point da aplicação
-│   │
-│   └── br/
+│   └── main/
+│       ├── Main.java               # Entry point da aplicação
+│       │
 │       └── compiler/
 │           │
 │           ├── ide/                # 🖥️ Interface Gráfica
@@ -91,7 +91,7 @@ ide-compilers/
 
 ## 📦 Descrição dos Pacotes
 
-### `br.compiler.ide` - Interface Gráfica
+### `compiler.ide` - Interface Gráfica
 
 Contém todos os componentes visuais da IDE.
 
@@ -102,11 +102,11 @@ Contém todos os componentes visuais da IDE.
 | `ConsolePanel.java` | Painel de mensagens (JTextArea) |
 | `MenuBar.java` | Barra de menu (Novo, Abrir, Salvar, Compilar) |
 
-**Dependências:** `br.compiler.compiler`, `br.compiler.factory`
+**Dependências:** `compiler.compiler`, `compiler.factory`
 
 ---
 
-### `br.compiler.compiler` - Engine de Compilação
+### `compiler.compiler` - Engine de Compilação
 
 Implementa o padrão Strategy para as fases de compilação.
 
@@ -118,11 +118,11 @@ Implementa o padrão Strategy para as fases de compilação.
 | `SyntacticPhase.java` | Executa análise sintática |
 | `SemanticPhase.java` | Executa análise semântica (futuro) |
 
-**Dependências:** `br.compiler.adapter`, `br.compiler.model`, `br.compiler.error`
+**Dependências:** `compiler.adapter`, `compiler.model`, `compiler.error`
 
 ---
 
-### `br.compiler.gals` - Classes GALS
+### `compiler.gals` - Classes GALS
 
 Classes geradas automaticamente pelo GALS. **Não editar manualmente!**
 
@@ -145,7 +145,7 @@ Classes geradas automaticamente pelo GALS. **Não editar manualmente!**
 
 ---
 
-### `br.compiler.adapter` - Adapter Pattern
+### `compiler.adapter` - Adapter Pattern
 
 Isola o sistema das classes geradas pelo GALS.
 
@@ -154,11 +154,11 @@ Isola o sistema das classes geradas pelo GALS.
 | `GalsAdapter.java` | Interface do adapter |
 | `GalsParserAdapter.java` | Implementação concreta |
 
-**Dependências:** `br.compiler.gals`, `br.compiler.model`
+**Dependências:** `compiler.gals`, `compiler.model`
 
 ---
 
-### `br.compiler.error` - Sistema de Erros
+### `compiler.error` - Sistema de Erros
 
 Implementa Chain of Responsibility para tratamento de erros.
 
@@ -170,11 +170,11 @@ Implementa Chain of Responsibility para tratamento de erros.
 | `SyntacticErrorHandler.java` | Processa erros sintáticos |
 | `SemanticErrorHandler.java` | Processa erros semânticos |
 
-**Dependências:** `br.compiler.model`
+**Dependências:** `compiler.model`
 
 ---
 
-### `br.compiler.factory` - Factory Pattern
+### `compiler.factory` - Factory Pattern
 
 Centraliza criação de objetos.
 
@@ -187,7 +187,7 @@ Centraliza criação de objetos.
 
 ---
 
-### `br.compiler.model` - Modelos de Dados
+### `compiler.model` - Modelos de Dados
 
 DTOs e classes de modelo.
 
