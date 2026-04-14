@@ -1,6 +1,6 @@
-import br.compiler.compiler.CompilationEngine;
-import br.compiler.factory.ParserFactory;
-import br.compiler.model.CompilationResult;
+import compiler.compiler.CompilationEngine;
+import compiler.factory.ParserFactory;
+import compiler.model.CompilationResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -280,5 +280,23 @@ public class CompilerSyntaxTests {
 
         assertFalse(result.isSuccess(),
                 "Expected compilation failure for invalid syntax");
+    }
+
+    @Test
+    void shouldReturnDetailedSyntacticMessageWithExpectedTokens() {
+        String program = """
+        int a = ;
+        """;
+
+        CompilationResult result = compiler.compile(program);
+
+        assertFalse(result.isSuccess(), "Expected syntax error");
+        assertNotNull(result.getErrorMessage(), "Expected detailed error message");
+        assertTrue(result.getErrorMessage().contains("encontrado"),
+                () -> "Message should mention found token: " + result.getErrorMessage());
+        assertTrue(result.getErrorMessage().contains("esperado"),
+                () -> "Message should list expected tokens: " + result.getErrorMessage());
+        assertFalse(result.getErrorMessage().contains("Erro estado"),
+                () -> "Message should not expose parser state only: " + result.getErrorMessage());
     }
 }
