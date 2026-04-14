@@ -2698,16 +2698,16 @@ public interface ScannerConstants
         {255, 43}
     };
 
-    int[] TOKEN_STATE = {-1,  0, 40, -1, 52, 34, -1, 60, 61, 50, 48, 66, 49, 68, 51, 23, 23, 67, 69, 42, 47, 41,  4, 62, 63, 36,  4,  4,  4, 64, 35, 65, 37, 46, 28, 59, 38, -1, 57, 53, 55, 54, 56, -1,  2, 58, -1, -1, -1, 32, 44, 45, 43, 33,  4,  4,  4, 39, 27, -1, 26, 24, 25,  4,  4,  4, -1,  3,  4,  4,  4, -1,  4,  3 };
+    int[] TOKEN_STATE = {-1,  0, 38, -1, 50, 32, -1, 58, 59, 48, 46, 64, 47, 66, 49, 21, 21, 65, 67, 40, 45, 39,  2, 60, 61, 34,  2,  2,  2, 62, 33, 63, 35, 44, 26, 57, 36, -1, 55, 51, 53, 52, 54, -1,  0, 56, -1, -1, -1, 30, 42, 43, 41, 31,  2,  2,  2, 37, 25, -1, 24, 22, 23,  2,  2,  2, -1,  0,  2,  2,  2, -1,  2,  0 };
 
     int[] SPECIAL_CASES_INDEXES =
-        { 0, 0, 0, 0, 0, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19 };
+        { 0, 0, 0, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19 };
 
     String[] SPECIAL_CASES_KEYS =
         {  "bool", "char", "decimal", "do", "double", "elif", "else", "float", "for", "if", "int", "long", "read", "return", "short", "string", "void", "while", "write" };
 
     int[] SPECIAL_CASES_VALUES =
-        {  7, 5, 13, 19, 12, 15, 16, 11, 18, 14, 9, 10, 21, 20, 8, 6, 70, 17, 22 };
+        {  5, 3, 11, 17, 10, 13, 14, 9, 16, 12, 7, 8, 19, 18, 6, 4, 68, 15, 20 };
 
     String[] SCANNER_ERROR =
     {
@@ -2754,7 +2754,7 @@ public interface ScannerConstants
         "",
         "",
         "",
-        "Erro identificando block_comment",
+        "Erro identificando <ignorar>",
         "",
         "",
         "Erro identificando real_number",
@@ -2770,19 +2770,19 @@ public interface ScannerConstants
         "",
         "",
         "",
-        "Erro identificando block_comment",
+        "Erro identificando <ignorar>",
         "",
         "",
         "",
         "",
         "",
         "",
-        "Erro identificando block_comment",
+        "Erro identificando <ignorar>",
         "",
         "",
         "",
         "",
-        "Erro identificando block_comment",
+        "Erro identificando <ignorar>",
         "",
         ""
     };
