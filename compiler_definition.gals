@@ -110,6 +110,7 @@ void = variable : "void"
 <prefix_unary>
 <comment>
 <variable_type>
+<block>
 <statement>
 <statement_list>
 <variable_access>
@@ -120,7 +121,6 @@ void = variable : "void"
 <vector_initializer_opt>
 <vector_initializer>
 <vector_initializer_list>
-<variable_assignment>
 <conditional_statement>
 <loop_statement>
 <while_loop>
@@ -135,7 +135,9 @@ void = variable : "void"
 <function_call>
 <argument_list>
 <argument>
+<expression_list>
 <expression>
+<assignment>
 <logical>
 <equality>
 <relational>
@@ -143,8 +145,8 @@ void = variable : "void"
 <additive>
 <multiplicative>
 <unary_expression>
+<postfix_expression>
 <primary>
-<block>
 <input_statement>
 <input_list>
 <output_statement>
@@ -152,6 +154,7 @@ void = variable : "void"
 <output_item>
 #Grammar
 <empty> ::= î;
+
 
 <literal> ::=
       number
@@ -164,13 +167,15 @@ void = variable : "void"
     | false
     | null;
 
+
 <assignment_operator> ::=
   equals 
-   | addition_equals
-   | subtraction_equals
-   | multiplication_equals
-   | division_equals
-   | modulus_equals;
+  | addition_equals
+  | subtraction_equals
+  | multiplication_equals
+  | division_equals
+  | modulus_equals;
+
 
 <prefix_unary> ::= 
   not
@@ -180,17 +185,34 @@ void = variable : "void"
   | increment
   | decrement;
 
+
 <comment> ::= 
      line_comment
     | block_comment;
+
     
-<variable_type> ::= bool | short | int | long | float | double | decimal | char | string;
+<variable_type> ::= 
+  bool 
+  | short 
+  | int 
+  | long 
+  | float 
+  | double 
+  | decimal 
+  | char 
+  | string;
+
+
+<block> ::= 
+  open_brace close_brace 
+  | open_brace <statement_list> close_brace;
+
 
 <program> ::= <statement_list>;
 
+
 <statement> ::= 
       <variable_declaration> semicolon
-    | <variable_assignment> semicolon
     | <expression> semicolon
     | return <expression> semicolon
     | <conditional_statement>
@@ -199,101 +221,158 @@ void = variable : "void"
     | <output_statement>
     | <function_definition>
     | <comment>;
+
     
 <statement_list> ::= 
     <statement_list> <statement>
   | <statement>;
     
 
-
 <variable_access> ::= 
-    variable
+  variable
   | variable open_bracket <expression> close_bracket;
 
 <variable_declaration> ::= <variable_type> <declarator_list>;
-<declarator_list> ::= <declarator> | <declarator_list> comma <declarator>;
+
+
+<declarator_list> ::= 
+  <declarator> 
+  | <declarator_list> comma <declarator>;
+
+  
 <declarator> ::=
       variable
     | variable equals <expression>
     | variable open_bracket <vector_declaration_opt> close_bracket <vector_initializer_opt>;
-<vector_declaration_opt> ::= <expression> | <empty>;
-<vector_initializer_opt> ::= equals <vector_initializer> | <empty>;
+
+    
+<vector_declaration_opt> ::= 
+  <expression> 
+  | <empty>;
+
+
+<vector_initializer_opt> ::= 
+  equals <vector_initializer> 
+  | <empty>;
+
+
 <vector_initializer> ::= 
-      open_brace close_brace
-    | open_brace <vector_initializer_list> close_brace;
+  open_brace close_brace
+  | open_brace <vector_initializer_list> close_brace;
+
+    
 <vector_initializer_list> ::= 
-      <vector_initializer_list> comma <expression>
-    | <expression>;
+  <vector_initializer_list> comma <expression>
+  | <expression>;
 
-<variable_assignment> ::= <variable_access> <assignment_operator> <expression>;
-
+    
 <conditional_statement> ::= 
-      if open_parentheses <expression> close_parentheses <block>
-    | if open_parentheses <expression> close_parentheses <block> else <block>;
+  if open_parentheses <expression> close_parentheses <block>
+  | if open_parentheses <expression> close_parentheses <block> else <block>;
+
 
 <loop_statement> ::= 
   <while_loop>
  | <do_while_loop>
  | <for_loop>;
 
+
 <while_loop> ::= while open_parentheses <expression> close_parentheses <block>;
+
 
 <do_while_loop> ::= do <block> while open_parentheses <expression> close_parentheses semicolon;
 
+
 <for_loop> ::= for open_parentheses <for_init> semicolon <expression> semicolon <for_update> close_parentheses <block>;
+
 
 <for_init> ::= 
   <variable_declaration> 
   | <empty>;
 
+
 <for_update> ::= 
-  <variable_assignment>
-  | <variable_assignment> comma <for_update>
+    <expression_list>
   | <empty>;
+
 
 <function_definition> ::= 
    void variable open_parentheses <parameter_list_opt> close_parentheses <block>
   | <variable_type> variable open_parentheses <parameter_list_opt> close_parentheses <block>;
 
-<parameter_list_opt> ::= <parameter_list> | <empty>;
-<parameter_list> ::= <parameter> | <parameter_list> comma <parameter>;
-<parameter> ::= <variable_type> variable | <variable_type> variable open_bracket close_bracket;
+
+<parameter_list_opt> ::= 
+  <parameter_list> 
+  | <empty>;
+
+
+<parameter_list> ::= 
+  <parameter> 
+  | <parameter_list> comma <parameter>;
+
+  
+<parameter> ::= 
+  <variable_type> variable 
+  | <variable_type> variable open_bracket close_bracket;
+
 
 <function_call> ::= 
   variable open_parentheses close_parentheses
   | variable open_parentheses <argument_list> close_parentheses;
 
-<argument_list> ::= <argument> | <argument_list> comma <argument>;
+
+<argument_list> ::= 
+  <argument> 
+  | <argument_list> comma <argument>;
+
+
 <argument> ::= <expression>;
 
-<expression> ::= <logical>;
+
+<expression_list> ::=
+    <expression>
+  | <expression_list> comma <expression>;
+
+
+<expression> ::= <assignment>;
+
+
+<assignment> ::=
+      <variable_access> <assignment_operator> <assignment>
+    | <logical>;
+
 
 <logical> ::=
       <logical> and <equality>
     | <logical> or <equality>
     | <equality>;
 
+
 <equality> ::= 
   <equality> equality <relational>
   | <equality> inequality <relational>
   | <relational>;
 
+
 <relational> ::=
-      <relational> greater_than <shift>
+    <relational> greater_than <shift>
     | <relational> less_than <shift>
     | <relational> greater_equal <shift>
     | <relational> less_equal <shift>
     | <shift>;
+
 
 <shift> ::= 
   <shift> bit_shift_left <additive>
   | <shift> bit_shift_right <additive>
   | <additive>;
 
+
 <additive> ::=
-      <additive> addition <multiplicative>
+    <additive> addition <multiplicative>
     | <additive> subtraction <multiplicative>
     | <multiplicative>;
+
 
 <multiplicative> ::=
       <multiplicative> multiplication <unary_expression>
@@ -301,9 +380,17 @@ void = variable : "void"
     | <multiplicative> remainder <unary_expression>
     | <unary_expression>;
 
+
 <unary_expression> ::= 
-  <prefix_unary> <unary_expression>
-  | <primary>;
+  <postfix_expression>
+  | <prefix_unary> <unary_expression>;
+
+
+<postfix_expression> ::=
+    <primary>
+  | <postfix_expression> increment
+  | <postfix_expression> decrement;
+
 
 <primary> ::= 
     <literal>
@@ -311,20 +398,23 @@ void = variable : "void"
   | <function_call>
   | open_parentheses <expression> close_parentheses;
 
-<block> ::= open_brace close_brace | open_brace <statement_list> close_brace;
 
 <input_statement> ::= read open_parentheses <input_list> close_parentheses semicolon;
+
 
 <input_list> ::= 
     <variable_access>
     | <variable_access> comma <input_list>
     | <empty>;
 
+
 <output_statement> ::= write open_parentheses <output_list> close_parentheses semicolon;
+
 
 <output_list> ::= 
     <output_item> 
     | <output_item> comma <output_list>
     | <empty>;
+
 
 <output_item> ::= <expression>;
