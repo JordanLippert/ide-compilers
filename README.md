@@ -37,6 +37,7 @@ IDE (Integrated Development Environment) integrada a um compilador que realiza a
 - ✅ Expressões bitwise
 - ✅ Atribuições simples
 - ✅ Comandos `print()` e `log()`
+- ✅ Mensagens sintáticas detalhadas (token encontrado + tokens esperados)
 
 ### 🔄 A Implementar (T2)
 - [ ] Declaração de variáveis múltiplas (1.5 pts)
@@ -64,37 +65,38 @@ O projeto utiliza padrões de design para garantir flexibilidade e manutenibilid
 
 ```
 src/
-├── Main.java                       # Entry point
-└── br/compiler/
-    ├── ide/                        # Interface gráfica
-    │   ├── CompilerIDE.java
-    │   ├── EditorPanel.java
-    │   ├── ConsolePanel.java
-    │   └── MenuBar.java
-    ├── compiler/                   # Engine de compilação
-    │   ├── CompilationEngine.java
-    │   ├── CompilationPhase.java
-    │   ├── LexicalPhase.java
-    │   ├── SyntacticPhase.java
-    │   └── SemanticPhase.java
-    ├── adapter/                    # Adapter pattern
-    │   ├── GalsAdapter.java
-    │   └── GalsParserAdapter.java
-    ├── error/                      # Sistema de erros
-    │   ├── ErrorHandler.java
-    │   ├── ErrorFormatter.java
-    │   ├── LexicalErrorHandler.java
-    │   ├── SyntacticErrorHandler.java
-    │   └── SemanticErrorHandler.java
-    ├── factory/                    # Factories
-    │   ├── ComponentFactory.java
-    │   └── ParserFactory.java
-    ├── model/                      # Modelos de dados
-    │   ├── CompilationResult.java
-    │   ├── ErrorMessage.java
-    │   └── ErrorSeverity.java
-    └── gals/                       # Classes geradas (GALS)
-        └── (a serem geradas)
+└── main/
+    ├── Main.java                   # Entry point
+    └── compiler/
+        ├── ide/                    # Interface gráfica
+        │   ├── CompilerIDE.java
+        │   ├── EditorPanel.java
+        │   ├── ConsolePanel.java
+        │   └── MenuBar.java
+        ├── compiler/               # Engine de compilação
+        │   ├── CompilationEngine.java
+        │   ├── CompilationPhase.java
+        │   ├── LexicalPhase.java
+        │   ├── SyntacticPhase.java
+        │   └── SemanticPhase.java
+        ├── adapter/                # Adapter pattern
+        │   ├── GalsAdapter.java
+        │   └── GalsParserAdapter.java
+        ├── error/                  # Sistema de erros
+        │   ├── ErrorHandler.java
+        │   ├── ErrorFormatter.java
+        │   ├── LexicalErrorHandler.java
+        │   ├── SyntacticErrorHandler.java
+        │   └── SemanticErrorHandler.java
+        ├── factory/                # Factories
+        │   ├── ComponentFactory.java
+        │   └── ParserFactory.java
+        ├── model/                  # Modelos de dados
+        │   ├── CompilationResult.java
+        │   ├── ErrorMessage.java
+        │   └── ErrorSeverity.java
+        └── gals/                   # Classes geradas (GALS)
+            └── (a serem geradas)
 ```
 
 ## 🚀 Como Executar
