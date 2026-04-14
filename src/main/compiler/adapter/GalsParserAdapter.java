@@ -163,13 +163,13 @@ public class GalsParserAdapter implements IGalsAdapter {
 
         if (parserState >= 0) {
             return String.format(
-                "Erro sintático na linha %d, coluna %d: encontrado %s; esperado: %s. [estado %d]",
+                "Erro sintático na linha %d, coluna %d: encontrado %s, esperado: %s. [estado %d]",
                 line, column, found, expected, parserState
             );
         }
 
         return String.format(
-            "Erro sintático na linha %d, coluna %d: encontrado %s; esperado: %s.",
+            "Erro sintático na linha %d, coluna %d: encontrado %s, esperado: %s.",
             line, column, found, expected
         );
     }
@@ -264,22 +264,17 @@ public class GalsParserAdapter implements IGalsAdapter {
         return "'" + lexeme + "'";
     }
 
-    private String formatExpectedTokens(List<String> expectedTokens) {
+    private String  formatExpectedTokens(List<String> expectedTokens) {
         if (expectedTokens == null || expectedTokens.isEmpty()) {
             return "token válido";
         }
 
-        int limit = Math.min(MAX_EXPECTED_TOKENS, expectedTokens.size());
         StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < limit; i++) {
+        for (int i = 0; i < expectedTokens.size(); i++) {
             if (i > 0) {
                 builder.append(", ");
             }
             builder.append(expectedTokens.get(i));
-        }
-
-        if (expectedTokens.size() > limit) {
-            builder.append(", ...");
         }
 
         return builder.toString();
