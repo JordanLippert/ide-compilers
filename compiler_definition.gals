@@ -164,15 +164,15 @@ void = variable : "void"
 
 
 <literal> ::=
-  number
-  | binary_number
-  | hex_number
-  | real_number
-  | char_literal
-  | string_literal
-  | true
-  | false
-  | null;
+  number #0
+  | binary_number #2
+  | hex_number #3
+  | real_number #4
+  | char_literal #5
+  | string_literal #6
+  | true #7
+  | false #8
+  | null #9;
 
 
 <assignment_operator> ::=
@@ -194,15 +194,15 @@ void = variable : "void"
 
 
 <variable_type> ::= 
-  bool 
-  | short 
-  | int 
-  | long 
-  | float 
-  | double 
-  | decimal 
-  | char 
-  | string;
+  bool #10
+  | short #10
+  | int #10
+  | long #10
+  | float #10
+  | double #10
+  | decimal #10
+  | char #10
+  | string #10;
 
 
 <logical_operator> ::=
@@ -269,7 +269,7 @@ void = variable : "void"
     
 
 <variable_access> ::= 
-  variable
+  variable #12
   | variable open_bracket <expression> close_bracket;
 
 
@@ -282,9 +282,9 @@ void = variable : "void"
 
   
 <declarator> ::=
-  variable
-  | variable equals <expression>
-  | variable open_bracket <vector_declaration_opt> close_bracket <vector_initializer_opt>;
+  variable #11
+  | variable #11 equals <expression>
+  | variable #11 open_bracket <vector_declaration_opt> close_bracket <vector_initializer_opt>;
 
     
 <vector_declaration_opt> ::= 
@@ -379,7 +379,8 @@ void = variable : "void"
 
 
 <assignment> ::=
-  <variable_access> <assignment_operator> <assignment>
+  variable <assignment_operator> <assignment> #13
+  | variable open_bracket <expression> close_bracket <assignment_operator> <assignment> #13
   | <logical>;
 
 

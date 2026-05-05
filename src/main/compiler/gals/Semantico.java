@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Semantico implements Constants
 {
-    private final Stack<Object> stack = new Stack<>();
+    private final Stack<Literal> literalStack = new Stack<>();
     private final Stack<Object> scopeStack = new Stack<>();
 
     private final List<Symbol> symbolsTable = new ArrayList<>();
@@ -19,19 +19,21 @@ public class Semantico implements Constants
     public void executeAction(int action, Token token)	throws SemanticError
     {
         switch (action) {
-            case 1: // add literal to stack
+            case 0,1,2,3,4,5,6,7,8,9: // add literal to stack
             {
-                String literal = token.getLexeme();
-                stack.push(literal);
+                String literalName = token.getLexeme();
+                SymbolType type = getSymbolTypeFromInteger(action);
+                Literal literal = new Literal(type, literalName);
+                literalStack.push(literal);
                 break;
             }
-            case 2: // get variable type
+            case 10: // get variable type
             {
                 String type = token.getLexeme();
                 currentSymbolType = getSymbolTypeFromString(type);
                 break;
             }
-            case 3: // get variable name and save in symbols table
+            case 11: // get variable name and save in symbols table
             {
                 String name = token.getLexeme();
                 Symbol newSymbol = new Symbol(name, currentSymbolType, currentScope);
@@ -44,18 +46,38 @@ public class Semantico implements Constants
                 }
                 break;
             }
-            case 4: // access a variable
+            case 12: // access a variable
             {
                 String accessedSymbolName = token.getLexeme();
                 Symbol accessedSymbol = findSymbol(symbolsTable, accessedSymbolName, currentScope);
                 if (Objects.isNull(accessedSymbol)) {
                     throw new SemanticError("Symbol not found: " + accessedSymbolName);
                 }
+
+                literalStack.push(new Literal(accessedSymbol.type, accessedSymbol.id));
                 break;
+            }
+            case 13: // assign variable
+            {
+                // TODO
             }
             default:
                 throw new SemanticError("Semantico: Invalid action " + action);
         }
+    }
+
+    private SymbolType getSymbolTypeFromInteger(int type) {
+        return switch (type) {
+            case 0 -> SymbolType.Integer; // number
+            case 1 -> SymbolType.Long; // binary number
+            case 2 -> SymbolType.Long; // hex number
+            case 3 -> SymbolType.Float; // real number
+            case 4 -> SymbolType.Character; // char
+            case 5 -> SymbolType.String; // string
+            case 6, 7 -> SymbolType.Boolean;
+            case 8 -> SymbolType.Null; // null
+            default -> throw new IllegalStateException("Unexpected value: " + type);
+        };
     }
 
     private Symbol findSymbol(List<Symbol> table, String id, Scope currentScope) {
@@ -105,4 +127,38 @@ public class Semantico implements Constants
             default -> throw new IllegalArgumentException("Unknown type: " + type);
         };
     }
+
+    // TODO: function to reduce operation
+//    private void reduceBinary(OperationType op) throws SemanticError {
+//        Literal right = literalStack.pop();
+//        Literal left = literalStack.pop();
+//
+//        // type checking (simplified)
+//        SymbolType resultType = checkCompatibility(left.type, right.type, op);
+//
+//        Literal result = new Literal(resultType, null); // value optional in semantic phase
+//        literalStack.push (result);
+//    }
+
+    // TODO: function to reduce assigment operation
+//    private void reduceAssignment() throws SemanticError {
+//        Literal value = literalStack.pop();   // result of expression
+//        Literal target = literalStack.pop();  // variable
+//
+//        Symbol symbol = findSymbol(symbolsTable, target.value, currentScope);
+//
+//        if (symbol == null) {
+//            throw new SemanticError("Variable not declared: " + target.value);
+//        }
+//
+//        // type check
+//        if (!isAssignable(symbol.type, value.type)) {
+//            throw new SemanticError("Type mismatch in assignment");
+//        }
+//
+//        symbol.isAlredyInitialized = true;
+//
+//        // push result (optional, depends on your language semantics)
+//        literalStack.push(new Literal(symbol.type, target.value));
+//    }
 }
