@@ -18,15 +18,15 @@ public class ComponentFactory {
     public static JTextPane createEditor() {
         JTextPane editor = new JTextPane();
         editor.setFont(new Font(MONOSPACED_FONT, Font.PLAIN, FONT_SIZE));
-        editor.setBackground(Color.WHITE);
-        editor.setForeground(Color.BLACK);
+        editor.setBackground(new Color(30, 30, 30));
+        editor.setForeground(new Color(212, 212, 212));
         editor.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        editor.setCaretColor(Color.BLACK);
+        editor.setCaretColor(new Color(174, 175, 173));
         return editor;
     }
     
-    public static JTextArea createConsole() {
-        JTextArea console = new JTextArea();
+    public static JTextPane createConsole() {
+        JTextPane console = new JTextPane();
         console.setFont(new Font(MONOSPACED_FONT, Font.PLAIN, FONT_SIZE));
         console.setEditable(false);
         console.setBackground(new Color(40, 44, 52));
@@ -41,6 +41,10 @@ public class ComponentFactory {
         button.setFont(new Font(SANS_SERIF_FONT, Font.BOLD, FONT_SIZE));
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setBackground(new Color(60, 60, 60));
+        button.setForeground(new Color(212, 212, 212));
+        button.setOpaque(true);
+        button.setBorderPainted(false);
         return button;
     }
     
