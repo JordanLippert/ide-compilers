@@ -159,6 +159,7 @@ void = variable : "void"
 <output_statement>
 <output_list>
 <output_item>
+<assign_target>
 #Grammar
 <empty> ::= î;
 
@@ -273,6 +274,10 @@ void = variable : "void"
   | variable open_bracket <expression> close_bracket;
 
 
+<assign_target> ::=
+    variable #14;
+
+
 <variable_declaration> ::= <variable_type> <declarator_list>;
 
 
@@ -379,8 +384,8 @@ void = variable : "void"
 
 
 <assignment> ::=
-  variable <assignment_operator> <assignment> #13
-  | variable open_bracket <expression> close_bracket <assignment_operator> <assignment> #13
+  <assign_target> <assignment_operator> <assignment> #13
+  | <assign_target> open_bracket <expression> close_bracket <assignment_operator> <assignment> #13
   | <logical>;
 
 
