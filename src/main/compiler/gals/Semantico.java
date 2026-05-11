@@ -59,7 +59,26 @@ public class Semantico implements Constants
             }
             case 13: // assign variable
             {
-                // TODO
+                Literal value = literalStack.pop(); //lado direito
+                Literal target = literalStack.pop(); // variavel do lado esquerdo empilhada pelo #14
+                Symbol symbol = findSymbol(symbolsTable, target.value, currentScope);
+
+                if (symbol != null) {
+                    symbol.isAlredyInitialized = true;
+                }
+                literalStack.push(new Literal(symbol.type, target.value));
+                break;
+            }
+            case 14: // captura variável do lado esquerdo do assignment
+            {
+                String variableName = token.getLexeme();
+                Symbol symbol = findSymbol(symbolsTable, variableName, currentScope);
+
+                if (symbol == null) {
+                    throw new SemanticError("Variable not declared: " + variableName);
+                }
+                literalStack.push(new Literal(symbol.type, symbol.id));
+                break;
             }
             default:
                 throw new SemanticError("Semantico: Invalid action " + action);
