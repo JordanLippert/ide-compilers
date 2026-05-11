@@ -31,10 +31,10 @@ public class StatusBar extends JPanel {
     }
 
     public void updateFile(String fileName) {
-        fileLabel.setText(fileName);
+        SwingUtilities.invokeLater(() -> fileLabel.setText(fileName));
     }
 
     public void updateCaret(int line, int col) {
-        caretLabel.setText("Ln " + line + ", Col " + col);
+        SwingUtilities.invokeLater(() -> caretLabel.setText("Ln " + line + ", Col " + col));
     }
 }
