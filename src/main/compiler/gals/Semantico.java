@@ -42,7 +42,7 @@ public class Semantico implements Constants
                     insertIntoSymbolsTable(newSymbol);
                 }
                 catch (SemanticError e) {
-                    System.out.println(e);
+                    throw e;
                 }
                 break;
             }
