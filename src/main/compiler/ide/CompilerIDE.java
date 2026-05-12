@@ -6,6 +6,8 @@ import compiler.factory.ParserFactory;
 import compiler.model.CompilationResult;
 
 import javax.swing.*;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -24,6 +26,7 @@ public class CompilerIDE extends JFrame {
     private EditorPanel editorPanel;
     private ConsolePanel consolePanel;
     private MenuBar menuBar;
+    private StatusBar statusBar;
     
     private JButton compileButton;
     private JButton newButton;
@@ -53,6 +56,7 @@ public class CompilerIDE extends JFrame {
         
         editorPanel = new EditorPanel();
         consolePanel = new ConsolePanel();
+        statusBar = new StatusBar();
         menuBar = new MenuBar();
         
         compileButton = ComponentFactory.createCompileButton();
@@ -61,6 +65,7 @@ public class CompilerIDE extends JFrame {
         saveButton = ComponentFactory.createSaveButton();
         
         setJMenuBar(menuBar);
+        updateTitle();
     }
     
     private void setupLayout() {
@@ -74,6 +79,7 @@ public class CompilerIDE extends JFrame {
         mainSplit.setDividerLocation(0.7);
         
         add(mainSplit, BorderLayout.CENTER);
+        add(statusBar, BorderLayout.SOUTH);
     }
     
     private JPanel createEditorSection() {
@@ -110,6 +116,18 @@ public class CompilerIDE extends JFrame {
         menuBar.setCompileAction(e -> compile());
         menuBar.setClearConsoleAction(e -> consolePanel.clear());
         menuBar.setAboutAction(e -> showAbout());
+
+        editorPanel.addCaretListener(e -> {
+            try {
+                int caretPos = e.getDot();
+                String text = editorPanel.getTextPane().getDocument().getText(0, caretPos);
+                int line = text.split("\n", -1).length;
+                int col = text.length() - text.lastIndexOf('\n');
+                statusBar.updateCaret(line, col);
+            } catch (javax.swing.text.BadLocationException ex) {
+                // unreachable: caretPos is always valid
+            }
+        });
     }
     
     private void setupKeyBindings() {
@@ -258,6 +276,7 @@ public class CompilerIDE extends JFrame {
     private void updateTitle() {
         String fileName = currentFile != null ? currentFile.getName() : "Sem título";
         setTitle(TITLE + " - " + fileName);
+        statusBar.updateFile(fileName);
     }
     
     private void showError(String message) {
