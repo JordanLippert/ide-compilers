@@ -183,4 +183,233 @@ public class CompilerSemanticTests {
         """;
         assertSuccess(code);
     }
+
+    // Expressões aritméticas
+    @Test
+    void testArithmeticExpressions() {
+        String code = """
+            int a = 10;
+            int b = 3;
+            int c;
+            c = a + b;
+            c = a - b;
+            c = a * b;
+            c = a / b;
+        """;
+        assertSuccess(code);
+    }
+
+    // Expressões aritméticas com precedência
+    @Test
+    void testArithmeticPrecedence() {
+        String code = """
+            int a = 5;
+            int b = 3;
+            int c;
+            c = a + b * 2;
+            c = (a + b) * 2;
+            c = a * b - 1;
+        """;
+        assertSuccess(code);
+    }
+
+    // Expressões relacionais
+    @Test
+    void testRelationalExpressions() {
+        String code = """
+            int a = 10;
+            int b = 5;
+            if (a == b) { write("igual"); }
+            if (a != b) { write("diferente"); }
+            if (a > b)  { write("maior"); }
+            if (a < b)  { write("menor"); }
+            if (a >= b) { write("maior ou igual"); }
+            if (a <= b) { write("menor ou igual"); }
+        """;
+        assertSuccess(code);
+    }
+
+    // Expressões lógicas
+    @Test
+    void testLogicalExpressions() {
+        String code = """
+            bool a = true;
+            bool b = false;
+            if (a && b) { write("ambos"); }
+            if (a || b) { write("algum"); }
+            if (!a) { write("negacao"); }
+            if (a && !b) { write("a e nao b"); }
+        """;
+        assertSuccess(code);
+    }
+
+    // Expressões lógicas combinadas com relacionais
+    @Test
+    void testCombinedLogicalAndRelational() {
+        String code = """
+            int a = 10;
+            int b = 5;
+            int c = 7;
+            if (a > b && c < a) { write("verdadeiro"); }
+            if (a == 10 || b == 0) { write("algum verdadeiro"); }
+        """;
+        assertSuccess(code);
+    }
+
+    // Falha: declaração duplicada no mesmo escopo
+    @Test
+    void testFailsDuplicateVariableDeclaration() {
+        String code = """
+            int a;
+            int a;
+        """;
+        assertFailure(code);
+    }
+
+    // Falha: declaração duplicada com inicialização
+    @Test
+    void testFailsDuplicateVariableDeclarationWithInit() {
+        String code = """
+            int x = 1;
+            int x = 2;
+        """;
+        assertFailure(code);
+    }
+
+    // Falha: atribuição a variável não declarada
+    @Test
+    void testFailsAssignmentToUndeclaredVariable() {
+        String code = """
+            x = 10;
+        """;
+        assertFailure(code);
+    }
+
+    // Falha: uso de variável não declarada em expressão
+    @Test
+    void testFailsUndeclaredVariableInExpression() {
+        String code = """
+            int a;
+            a = undeclaredVar + 1;
+        """;
+        assertFailure(code);
+    }
+
+    // Falha: uso de variável não declarada no write
+    @Test
+    void testFailsUndeclaredVariableInWrite() {
+        String code = """
+            write(undeclaredVar);
+        """;
+        assertFailure(code);
+    }
+
+    // Falha: erro semântico gera tipo correto
+    @Test
+    void testDuplicateDeclarationErrorType() {
+        String code = """
+            int a;
+            int a;
+        """;
+        CompilationResult result = engine.compile(code);
+        assertFalse(result.isSuccess(), "Esperava falha por declaração duplicada");
+        assertEquals("SEMANTIC", result.getErrorType(),
+            "Tipo de erro deveria ser SEMANTIC, mas foi: " + result.getErrorType());
+    }
+
+    // Falha: variável não declarada em condição
+    @Test
+    void testFailsUndeclaredVariableInCondition() {
+        String code = """
+            if (notDeclared > 0) {
+                write("ok");
+            }
+        """;
+        assertFailure(code);
+    }
+
+    // ------------------------------------------------------------
+    // Action #13 — assign variable (marca variável como inicializada)
+    // ------------------------------------------------------------
+
+    @Test
+    void testAction13BasicAssignment() {
+        String code = """
+            int a;
+            a = 42;
+            write(a);
+        """;
+        assertSuccess(code);
+    }
+
+    @Test
+    void testAction13AssignmentFromVariable() {
+        String code = """
+            int a = 10;
+            int b;
+            b = a;
+            write(b);
+        """;
+        assertSuccess(code);
+    }
+
+    @Test
+    void testAction13MultipleReassignments() {
+        String code = """
+            int a = 1;
+            a = 2;
+            a = 3;
+            write(a);
+        """;
+        assertSuccess(code);
+    }
+
+    @Test
+    void testAction13AssignmentFromExpression() {
+        String code = """
+            int a = 5;
+            int b = 3;
+            int c;
+            c = a + b * 2;
+            write(c);
+        """;
+        assertSuccess(code);
+    }
+
+    // ------------------------------------------------------------
+    // Action #14 — capture assign target (captura lado esquerdo)
+    // ------------------------------------------------------------
+
+    @Test
+    void testAction14AssignTargetDeclared() {
+        String code = """
+            int x;
+            x = 99;
+        """;
+        assertSuccess(code);
+    }
+
+    @Test
+    void testAction14AssignTargetNotDeclaredThrows() {
+        String code = """
+            notDeclared = 5;
+        """;
+        CompilationResult result = engine.compile(code);
+        assertFalse(result.isSuccess(), "Esperava falha: variável não declarada");
+        assertEquals("SEMANTIC", result.getErrorType(),
+            "Tipo de erro deveria ser SEMANTIC, foi: " + result.getErrorType());
+    }
+
+    @Test
+    void testAction14AssignTargetInFunctionScope() {
+        String code = """
+            void f(int a) {
+                int local;
+                local = a + 1;
+                write(local);
+            }
+            f(10);
+        """;
+        assertSuccess(code);
+    }
 }

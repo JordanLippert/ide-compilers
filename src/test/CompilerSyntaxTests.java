@@ -3,6 +3,7 @@ import compiler.factory.ParserFactory;
 import compiler.model.CompilationResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class CompilerSyntaxTests {
@@ -298,5 +299,110 @@ public class CompilerSyntaxTests {
                 () -> "Message should list expected tokens: " + result.getErrorMessage());
         assertFalse(result.getErrorMessage().contains("Erro estado"),
                 () -> "Message should not expose parser state only: " + result.getErrorMessage());
+    }
+
+    // ------------------------------------------------------------
+    // 7. OPERADORES BITWISE
+    // ------------------------------------------------------------
+    @Test
+    void shouldParseBitwiseOperators() {
+        String program = """
+        int a = 5;
+        int b = 3;
+        int c;
+        c = a & b;
+        c = a | b;
+        c = a ^ b;
+        c = a << 1;
+        c = a >> 1;
+        """;
+
+        CompilationResult result = compiler.compile(program);
+
+        assertTrue(result.isSuccess(), result::toString);
+    }
+
+    // ------------------------------------------------------------
+    // 8. IF-ELSE ANINHADO
+    // ------------------------------------------------------------
+    @Test
+    void shouldParseNestedIfElse() {
+        String program = """
+        int x = 7;
+        if (x > 10) {
+            write("maior que 10");
+        } else if (x > 5) {
+            write("entre 5 e 10");
+        } else {
+            write("menor ou igual a 5");
+        }
+        """;
+
+        CompilationResult result = compiler.compile(program);
+
+        assertTrue(result.isSuccess(), result::toString);
+    }
+
+    // ------------------------------------------------------------
+    // 9. ERRO LÉXICO
+    // ------------------------------------------------------------
+    @Test
+    void shouldFailOnLexicalError() {
+        String program = """
+        int a = @invalido;
+        """;
+
+        CompilationResult result = compiler.compile(program);
+
+        assertFalse(result.isSuccess(), "Expected lexical failure for '@' character");
+        assertEquals("LEXICAL", result.getErrorType(),
+                "Expected LEXICAL error type but got: " + result.getErrorType());
+    }
+
+    // ------------------------------------------------------------
+    // 10. ERRO LÉXICO — STRING NÃO FECHADA
+    // ------------------------------------------------------------
+    @Test
+    void shouldFailOnUnterminatedString() {
+        String program = """
+        string s = "nao fechada;
+        """;
+
+        CompilationResult result = compiler.compile(program);
+
+        assertFalse(result.isSuccess(), "Expected failure for unterminated string literal");
+    }
+
+    // ------------------------------------------------------------
+    // 11. ATRIBUIÇÃO COMPOSTA
+    // ------------------------------------------------------------
+    @Test
+    void shouldParseCompoundAssignment() {
+        String program = """
+        int a = 5;
+        int arr[3];
+        arr[0] = a + 1;
+        arr[1] += 2;
+        arr[2] = arr[0] * arr[1];
+        """;
+
+        CompilationResult result = compiler.compile(program);
+
+        assertTrue(result.isSuccess(), result::toString);
+    }
+
+    // ------------------------------------------------------------
+    // 12. ERRO SINTÁTICO — BLOCO SEM FECHAR
+    // ------------------------------------------------------------
+    @Test
+    void shouldFailOnUnclosedBlock() {
+        String program = """
+        if (true) {
+            write("sem fechar");
+        """;
+
+        CompilationResult result = compiler.compile(program);
+
+        assertFalse(result.isSuccess(), "Expected failure for unclosed block");
     }
 }
