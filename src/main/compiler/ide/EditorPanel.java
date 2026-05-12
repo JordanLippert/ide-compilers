@@ -3,6 +3,7 @@ package compiler.ide;
 import compiler.factory.ComponentFactory;
 
 import javax.swing.*;
+import javax.swing.event.CaretListener;
 import java.awt.*;
 
 /**
@@ -41,5 +42,9 @@ public class EditorPanel extends JPanel {
     
     public JTextPane getTextPane() {
         return textPane;
+    }
+
+    public void addCaretListener(CaretListener listener) {
+        textPane.addCaretListener(listener);
     }
 }
