@@ -236,6 +236,29 @@ public final class TypeCompatibility {
     // Public API
     // ============================================================
 
+    /**
+     * Returns the result type of a binary operation between two compatible types.
+     * Assumes isCompatible() returned true.
+     */
+    public static SymbolType resultType(OperationType op, SymbolType left, SymbolType right) {
+        // Comparisons and logical ops always produce boolean
+        if (op == OperationType.GreaterThan  || op == OperationType.LessThan  ||
+            op == OperationType.GreaterEqual || op == OperationType.LessEqual ||
+            op == OperationType.Equality     || op == OperationType.Inequality ||
+            op == OperationType.And          || op == OperationType.Or) {
+            return SymbolType.Boolean;
+        }
+        // String concatenation
+        if (left == SymbolType.String) return SymbolType.String;
+        // Numeric arithmetic: return wider type
+        Integer leftRank  = NUMERIC_RANK.get(left);
+        Integer rightRank = NUMERIC_RANK.get(right);
+        if (leftRank != null && rightRank != null) {
+            return leftRank >= rightRank ? left : right;
+        }
+        return left;
+    }
+
     public static boolean isCompatible(OperationType operation,
                                        SymbolType left,
                                        SymbolType right) {
