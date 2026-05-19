@@ -13,7 +13,19 @@ import java.util.List;
  */
 public class SymbolTablePanel extends JPanel {
 
-    private static final String[] COLUMNS = {"Nome", "Tipo", "Escopo", "Inicializado", "Usado"};
+    private static final String[] COLUMNS = {
+            "Nome",
+            "Tipo",
+            "Escopo",
+            "Inicializado",
+            "Usado",
+            "Parâmetro",
+            "Posição Parâmetro",
+            "Array",
+            "Matriz",
+            "Por Referência",
+            "Função"
+    };
 
     private final DefaultTableModel tableModel;
     private final JTable table;
@@ -52,11 +64,17 @@ public class SymbolTablePanel extends JPanel {
         table.getTableHeader().setReorderingAllowed(false);
 
         // Column widths
-        table.getColumnModel().getColumn(0).setPreferredWidth(100); // Nome
-        table.getColumnModel().getColumn(1).setPreferredWidth(80);  // Tipo
-        table.getColumnModel().getColumn(2).setPreferredWidth(90);  // Escopo
-        table.getColumnModel().getColumn(3).setPreferredWidth(80);  // Inicializado
-        table.getColumnModel().getColumn(4).setPreferredWidth(60);  // Usado
+        table.getColumnModel().getColumn(0).setPreferredWidth(30); // ID
+        table.getColumnModel().getColumn(1).setPreferredWidth(30);  // Tipo
+        table.getColumnModel().getColumn(2).setPreferredWidth(30);  // Escopo
+        table.getColumnModel().getColumn(3).setPreferredWidth(30);  // Inicializado
+        table.getColumnModel().getColumn(4).setPreferredWidth(30);  // Usado
+        table.getColumnModel().getColumn(5).setPreferredWidth(30);  // Parâmtro
+        table.getColumnModel().getColumn(6).setPreferredWidth(30);  // Posição parametro
+        table.getColumnModel().getColumn(7).setPreferredWidth(30);  // Array
+        table.getColumnModel().getColumn(8).setPreferredWidth(30);  // Matriz
+        table.getColumnModel().getColumn(9).setPreferredWidth(30);  // Por referência
+        table.getColumnModel().getColumn(10).setPreferredWidth(30); // Função
 
         JScrollPane scroll = new JScrollPane(table);
         scroll.setBackground(BG_DARK);

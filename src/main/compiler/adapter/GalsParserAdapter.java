@@ -77,6 +77,8 @@ public class GalsParserAdapter implements IGalsAdapter {
             Semantico semantico = new Semantico();
             _sintatico.parse(lexico, semantico);
 
+            semantico.generateWarnings();
+
             return CompilationResult.success(semantico.getWarnings(), semantico.getSymbolTableRows());
         } catch (Exception e) {
             return CompilationResult.error(mapError(e));

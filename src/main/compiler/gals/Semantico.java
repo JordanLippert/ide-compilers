@@ -43,9 +43,6 @@ public class Semantico implements Constants
                 if (sym == null) {
                     throw new SemanticError("Symbol not found: " + name);
                 }
-                if (!sym.isAlredyInitialized) {
-                    warnings.add("Aviso: variável '" + name + "' usada sem inicialização (possível lixo de memória)");
-                }
                 sym.isAlredyUsed = true;
                 literalStack.push(new Literal(sym.type, sym.id));
                 break;
@@ -175,18 +172,87 @@ public class Semantico implements Constants
         return Collections.unmodifiableList(warnings);
     }
 
-    /** Returns symbol table as rows for JTable: [name, type, scope, initialized, used] */
+    /**
+     * Returns symbol table rows for JTable.
+     *
+     * Columns:
+     * [
+     *   nome,
+     *   tipo,
+     *   escopo,
+     *   inicializado,
+     *   usado,
+     *   parametro,
+     *   posicaoParametro,
+     *   array,
+     *   matriz,
+     *   porReferencia,
+     *   funcao
+     * ]
+     */
     public List<Object[]> getSymbolTableRows() {
+
         List<Object[]> rows = new ArrayList<>();
+
         for (Symbol s : symbolsTable) {
+
             rows.add(new Object[]{
-                s.id,
-                s.type != null ? s.type.name() : "?",
-                s.scope != null ? s.scope.name : "global",
-                s.isAlredyInitialized ? "Sim" : "Não",
-                s.isAlredyUsed      ? "Sim" : "Não"
+
+                    // Nome
+                    s.id,
+
+                    // Tipo
+                    s.type != null
+                            ? s.type.name()
+                            : "?",
+
+                    // Escopo
+                    s.scope != null
+                            ? s.scope.name
+                            : "global",
+
+                    // Inicializado
+                    Boolean.TRUE.equals(s.isAlredyInitialized)
+                            ? "Sim"
+                            : "Não",
+
+                    // Usado
+                    Boolean.TRUE.equals(s.isAlredyUsed)
+                            ? "Sim"
+                            : "Não",
+
+                    // Parâmetro
+                    Boolean.TRUE.equals(s.isParameter)
+                            ? "Sim"
+                            : "Não",
+
+                    // Posição do parâmetro
+                    s.paramterPosition != null
+                            ? s.paramterPosition
+                            : "-",
+
+                    // Array
+                    Boolean.TRUE.equals(s.isArray)
+                            ? "Sim"
+                            : "Não",
+
+                    // Matriz
+                    Boolean.TRUE.equals(s.isMatrix)
+                            ? "Sim"
+                            : "Não",
+
+                    // Por referência
+                    Boolean.TRUE.equals(s.isByReference)
+                            ? "Sim"
+                            : "Não",
+
+                    // Função
+                    Boolean.TRUE.equals(s.isFunction)
+                            ? "Sim"
+                            : "Não"
             });
         }
+
         return rows;
     }
 
@@ -242,5 +308,31 @@ public class Semantico implements Constants
             throw new SemanticError("Identificador já declarado neste escopo: " + sym.id);
         }
         symbolsTable.add(sym);
+    }
+
+    public void generateWarnings() {
+        // Gera avisos para simbolos não utilizados
+        List<Symbol> unusedSymbols = symbolsTable
+                .stream()
+                .filter(
+                        symbol -> symbol.isAlredyUsed == false
+                ).toList();
+
+        for (Symbol symbol : unusedSymbols) {
+            String message = String.format("O símbolo '%s' não é utilizado!", symbol.id);
+            warnings.add(message);
+        }
+
+        // Gera avisos para simbolos utilizados mas não inicializados
+        List<Symbol> usedUnitilizedSymbols = symbolsTable
+                .stream()
+                .filter(
+                        symbol -> symbol.isAlredyUsed == true && symbol.isAlredyInitialized == false
+                ).toList();
+
+        for (Symbol symbol : usedUnitilizedSymbols) {
+            String message = String.format("O símbolo '%s' é utilizado sem ser inicializado!", symbol.id);
+            warnings.add(message);
+        }
     }
 }
