@@ -23,7 +23,7 @@ public class SemanticPhase implements ICompilationPhase {
     
     @Override
     public CompilationResult execute(String sourceCode) throws LexicalError, SyntacticError, SemanticError {
-        return adapter.performSyntacticAnalysis(sourceCode);
+        return adapter.performSemanticAnalysis(sourceCode);
     }
     
     @Override

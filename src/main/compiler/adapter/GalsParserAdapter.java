@@ -74,9 +74,10 @@ public class GalsParserAdapter implements IGalsAdapter {
 
         try {
             Lexico lexico = new Lexico(sourceCode);
-            _sintatico.parse(lexico, _semantico);
+            Semantico semantico = new Semantico();
+            _sintatico.parse(lexico, semantico);
 
-            return CompilationResult.success();
+            return CompilationResult.success(semantico.getWarnings(), semantico.getSymbolTableRows());
         } catch (Exception e) {
             return CompilationResult.error(mapError(e));
         }

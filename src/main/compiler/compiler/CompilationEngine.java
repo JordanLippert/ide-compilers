@@ -45,21 +45,23 @@ public class CompilationEngine {
             return CompilationResult.error("VALIDATION", "Código fonte vazio", 0);
         }
         
+        CompilationResult lastResult = CompilationResult.success();
         for (ICompilationPhase phase : phases) {
             try {
                 CompilationResult result = phase.execute(sourceCode);
-                
+
                 if (!result.isSuccess()) {
                     ErrorMessage error = errorHandler.handle(result);
                     return CompilationResult.error(error);
                 }
-                
+
+                lastResult = result;
             } catch (Exception e) {
                 return CompilationResult.exception(e);
             }
         }
-        
-        return CompilationResult.success();
+
+        return lastResult;
     }
     
     public List<ICompilationPhase> getPhases() {
