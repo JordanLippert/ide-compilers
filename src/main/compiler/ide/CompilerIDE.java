@@ -25,6 +25,7 @@ public class CompilerIDE extends JFrame {
     
     private EditorPanel editorPanel;
     private ConsolePanel consolePanel;
+    private SymbolTablePanel symbolTablePanel;
     private MenuBar menuBar;
     private StatusBar statusBar;
     
@@ -56,6 +57,7 @@ public class CompilerIDE extends JFrame {
         
         editorPanel = new EditorPanel();
         consolePanel = new ConsolePanel();
+        symbolTablePanel = new SymbolTablePanel();
         statusBar = new StatusBar();
         menuBar = new MenuBar();
         
@@ -69,15 +71,23 @@ public class CompilerIDE extends JFrame {
     }
     
     private void setupLayout() {
-        // Painel dividido principal (editor em cima, console embaixo)
+        // Editor (left) + symbol table (right)
+        JSplitPane editorAndTableSplit = new JSplitPane(
+            JSplitPane.HORIZONTAL_SPLIT,
+            createEditorSection(),
+            symbolTablePanel
+        );
+        editorAndTableSplit.setResizeWeight(0.75);
+
+        // Top (editor+table) + bottom (console)
         JSplitPane mainSplit = new JSplitPane(
             JSplitPane.VERTICAL_SPLIT,
-            createEditorSection(),
+            editorAndTableSplit,
             consolePanel
         );
         mainSplit.setResizeWeight(0.7);
         mainSplit.setDividerLocation(0.7);
-        
+
         add(mainSplit, BorderLayout.CENTER);
         add(statusBar, BorderLayout.SOUTH);
     }
@@ -153,7 +163,15 @@ public class CompilerIDE extends JFrame {
         try {
             CompilationResult result = compilationEngine.compile(sourceCode);
             consolePanel.display(result);
-            
+
+            // Show warnings in console
+            for (String warning : result.getWarnings()) {
+                consolePanel.appendWarning(warning);
+            }
+
+            // Update symbol table panel
+            symbolTablePanel.update(result.getSymbolTableRows());
+
         } catch (Exception ex) {
             consolePanel.appendError("Erro inesperado: " + ex.getMessage());
             ex.printStackTrace();
@@ -163,6 +181,7 @@ public class CompilerIDE extends JFrame {
     private void newFile() {
         if (confirmDiscard()) {
             editorPanel.clear();
+            symbolTablePanel.clear();
             currentFile = null;
             updateTitle();
             consolePanel.appendInfo("Novo arquivo criado.");
