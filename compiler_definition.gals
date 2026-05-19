@@ -117,9 +117,12 @@ void = variable : "void"
 <additive_operator>
 <multiplicative_operator>
 <block>
+<scope_open>
+<scope_close>
 <statement>
 <statement_list>
 <variable_access>
+<assign_target>
 <variable_declaration>
 <declarator_list>
 <declarator>
@@ -159,9 +162,6 @@ void = variable : "void"
 <output_statement>
 <output_list>
 <output_item>
-<assign_target>
-<scope_open>
-<scope_close>
 #Grammar
 <empty> ::= î;
 
