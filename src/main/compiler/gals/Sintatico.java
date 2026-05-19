@@ -1,4 +1,5 @@
 package compiler.gals;
+
 import java.util.Stack;
 
 public class Sintatico implements Constants

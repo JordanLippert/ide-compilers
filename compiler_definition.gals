@@ -293,7 +293,7 @@ void = variable : "void"
   
 <declarator> ::=
   variable #11
-  | variable #11 equals <expression>
+  | variable #11 equals <expression> #22
   | variable #11 open_bracket <vector_declaration_opt> close_bracket <vector_initializer_opt>;
 
     
@@ -363,8 +363,8 @@ void = variable : "void"
 
   
 <parameter> ::= 
-  <variable_type> variable #11
-  | <variable_type> variable #11 open_bracket close_bracket;
+  <variable_type> variable #23
+  | <variable_type> variable #23 open_bracket close_bracket;
 
 
 <function_call> ::= 

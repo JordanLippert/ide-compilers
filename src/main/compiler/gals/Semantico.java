@@ -13,6 +13,7 @@ public class Semantico implements Constants
 
     private SymbolType currentSymbolType = null;
     private Scope currentScope = new Scope("global", null, true);
+    private Symbol lastDeclaredSymbol = null; // used by action #22 to mark initialization
 
     public void executeAction(int action, Token token) throws SemanticError
     {
@@ -34,6 +35,26 @@ public class Semantico implements Constants
                 String name = token.getLexeme();
                 Symbol newSymbol = new Symbol(name, currentSymbolType, currentScope);
                 insertIntoSymbolsTable(newSymbol);
+                lastDeclaredSymbol = newSymbol;
+                break;
+            }
+            case 22: // mark last declared variable as initialized (declarator with = expr)
+            {
+                if (lastDeclaredSymbol != null) {
+                    lastDeclaredSymbol.isAlredyInitialized = true;
+                }
+                // pop the initializer expression result off the literal stack
+                if (!literalStack.isEmpty()) literalStack.pop();
+                break;
+            }
+            case 23: // declare parameter (same as #11 but sets isParameter = true)
+            {
+                String name = token.getLexeme();
+                Symbol newSymbol = new Symbol(name, currentSymbolType, currentScope);
+                newSymbol.isParameter = true;
+                newSymbol.isAlredyInitialized = true; // parameters are always initialized by caller
+                insertIntoSymbolsTable(newSymbol);
+                lastDeclaredSymbol = newSymbol;
                 break;
             }
             case 12: // read variable (access)
@@ -84,13 +105,8 @@ public class Semantico implements Constants
                 currentScope = newScope;
                 break;
             }
-            case 16: // close scope — warn about unused variables
+            case 16: // close scope
             {
-                for (Symbol sym : symbolsTable) {
-                    if (sym.scope == currentScope && !sym.isAlredyUsed) {
-                        warnings.add("Aviso: variável '" + sym.id + "' declarada mas nunca usada");
-                    }
-                }
                 currentScope.isClosed = true;
                 if (!scopeStack.isEmpty()) scopeStack.pop();
                 currentScope = currentScope.parentScope;
