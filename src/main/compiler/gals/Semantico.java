@@ -16,6 +16,8 @@ public class Semantico implements Constants
     private Symbol lastDeclaredSymbol = null;
     private boolean justDeclared = false; // tracks if last action was #11 (for init detection)
 
+    private HashMap<Symbol, Object> symbolsValues = new HashMap<>();
+
     public void executeAction(int action, Token token) throws SemanticError
     {
         switch (action) {
@@ -25,9 +27,35 @@ public class Semantico implements Constants
                     lastDeclaredSymbol.isAlredyInitialized = true;
                     justDeclared = false;
                 }
-                String literalName = token.getLexeme();
+                String lexeme = token.getLexeme();
                 SymbolType type = getSymbolTypeFromInteger(action);
-                literalStack.push(new Literal(type, literalName));
+
+                Object value = switch (type) {
+                    case Integer -> Integer.parseInt(lexeme);
+                    case Long -> Long.parseLong(
+                            lexeme
+                                    .replace("0b", "")
+                                    .replace("0x", ""),
+                            lexeme.startsWith("0b")
+                                    ? 2
+                                    : lexeme.startsWith("0x")
+                                    ? 16
+                                    : 10
+                    );
+                    case Float,
+                         Double,
+                         Decimal -> Double.parseDouble(lexeme);
+                    case Boolean -> Boolean.parseBoolean(lexeme);
+                    case Character -> lexeme.charAt(1);
+                    case String -> lexeme.substring(
+                            1,
+                            lexeme.length() - 1
+                    );
+                    case Null -> null;
+                    default -> lexeme;
+                };
+
+                literalStack.push(new Literal(type, value));
                 break;
             }
             case 10: // capture variable type keyword
@@ -72,14 +100,17 @@ public class Semantico implements Constants
                     throw new SemanticError("Symbol not found: " + name);
                 }
                 sym.isAlredyUsed = true;
-                literalStack.push(new Literal(sym.type, sym.id));
+
+                Object value = symbolsValues.get(sym);
+
+                literalStack.push(new Literal(sym.type, value ));
                 break;
             }
             case 13: // assign value to variable
             {
                 Literal value = literalStack.pop();
                 Literal target = literalStack.pop();
-                Symbol sym = findSymbol(symbolsTable, target.value, currentScope);
+                Symbol sym = findSymbol(symbolsTable, (String) target.value, currentScope);
 
                 if (sym == null) {
                     throw new SemanticError("Variable not declared: " + target.value);
@@ -90,6 +121,7 @@ public class Semantico implements Constants
                     throw new SemanticError("Incompatible types: cannot assign " + value.type + " to " + sym.type);
                 }
 
+                symbolsValues.put(sym, value.value);
                 sym.isAlredyInitialized = true;
                 literalStack.push(new Literal(sym.type, target.value));
                 break;
