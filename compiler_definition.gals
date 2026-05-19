@@ -160,6 +160,8 @@ void = variable : "void"
 <output_list>
 <output_item>
 <assign_target>
+<scope_open>
+<scope_close>
 #Grammar
 <empty> ::= î;
 
@@ -207,8 +209,8 @@ void = variable : "void"
 
 
 <logical_operator> ::=
-  and
-  | or ;
+  and #20
+  | or #20;
 
 
 <bitwise_operator> ::=
@@ -218,15 +220,15 @@ void = variable : "void"
 
 
 <equality_operator> ::= 
-  equality
-  | inequality;
+  equality #19
+  | inequality #19;
 
 
 <relational_operator> ::=
-  greater_than 
-  | less_than
-  | greater_equal
-  | less_equal;
+  greater_than #19
+  | less_than #19
+  | greater_equal #19
+  | less_equal #19;
 
 
 <shift_operator> ::= 
@@ -235,19 +237,22 @@ void = variable : "void"
 
 
 <additive_operator> ::=
- addition
-  | subtraction;
+  addition #17
+  | subtraction #17;
 
 
 <multiplicative_operator> ::=
- multiplication
-  | division
-  | remainder;
+  multiplication #18
+  | division #18
+  | remainder #18;
 
 
 <block> ::= 
-  open_brace close_brace 
-  | open_brace <statement_list> close_brace;
+  <scope_open> <scope_close>
+  | <scope_open> <statement_list> <scope_close>;
+
+  <scope_open> ::= open_brace #15;
+  <scope_close> ::= close_brace #16;
 
 
 <program> ::= <statement_list>;
@@ -358,8 +363,8 @@ void = variable : "void"
 
   
 <parameter> ::= 
-  <variable_type> variable 
-  | <variable_type> variable open_bracket close_bracket;
+  <variable_type> variable #11
+  | <variable_type> variable #11 open_bracket close_bracket;
 
 
 <function_call> ::= 
@@ -390,7 +395,7 @@ void = variable : "void"
 
 
 <logical> ::=
-  <logical> <logical_operator> <bitwise>
+  <logical> <logical_operator> <bitwise> #21
   | <bitwise>;
 
 
@@ -400,12 +405,12 @@ void = variable : "void"
 
 
 <equality> ::= 
-  <equality> <equality_operator> <relational>
+  <equality> <equality_operator> <relational> #21
   | <relational>;
 
 
 <relational> ::=
-  <relational> <relational_operator> <shift>
+  <relational> <relational_operator> <shift> #21
   | <shift>;
 
 
@@ -415,13 +420,13 @@ void = variable : "void"
 
 
 <additive> ::=
-  <additive> <additive_operator> <multiplicative>
-    | <multiplicative>;
+  <additive> <additive_operator> <multiplicative> #21
+  | <multiplicative>;
 
 
 <multiplicative> ::=
-  <multiplicative> <multiplicative_operator> <unary_expression>
-    | <unary_expression>;
+  <multiplicative> <multiplicative_operator> <unary_expression> #21
+  | <unary_expression>;
 
 
 <unary_expression> ::= 
