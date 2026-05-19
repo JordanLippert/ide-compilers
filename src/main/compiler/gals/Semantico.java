@@ -13,13 +13,18 @@ public class Semantico implements Constants
 
     private SymbolType currentSymbolType = null;
     private Scope currentScope = new Scope("global", null, true);
-    private Symbol lastDeclaredSymbol = null; // used by action #22 to mark initialization
+    private Symbol lastDeclaredSymbol = null;
+    private boolean justDeclared = false; // tracks if last action was #11 (for init detection)
 
     public void executeAction(int action, Token token) throws SemanticError
     {
         switch (action) {
             case 0,1,2,3,4,5,6,7,8,9: // push literal onto stack
             {
+                if (justDeclared && lastDeclaredSymbol != null) {
+                    lastDeclaredSymbol.isAlredyInitialized = true;
+                    justDeclared = false;
+                }
                 String literalName = token.getLexeme();
                 SymbolType type = getSymbolTypeFromInteger(action);
                 literalStack.push(new Literal(type, literalName));
@@ -27,6 +32,7 @@ public class Semantico implements Constants
             }
             case 10: // capture variable type keyword
             {
+                justDeclared = false;
                 currentSymbolType = getSymbolTypeFromString(token.getLexeme());
                 break;
             }
@@ -36,14 +42,11 @@ public class Semantico implements Constants
                 Symbol newSymbol = new Symbol(name, currentSymbolType, currentScope);
                 insertIntoSymbolsTable(newSymbol);
                 lastDeclaredSymbol = newSymbol;
+                justDeclared = true;
                 break;
             }
-            case 22: // mark last declared variable as initialized (declarator with = expr)
+            case 22: // legacy — kept for safety, justDeclared handles init now
             {
-                if (lastDeclaredSymbol != null) {
-                    lastDeclaredSymbol.isAlredyInitialized = true;
-                }
-                // pop the initializer expression result off the literal stack
                 if (!literalStack.isEmpty()) literalStack.pop();
                 break;
             }
@@ -59,6 +62,10 @@ public class Semantico implements Constants
             }
             case 12: // read variable (access)
             {
+                if (justDeclared && lastDeclaredSymbol != null) {
+                    lastDeclaredSymbol.isAlredyInitialized = true;
+                    justDeclared = false;
+                }
                 String name = token.getLexeme();
                 Symbol sym = findSymbol(symbolsTable, name, currentScope);
                 if (sym == null) {
@@ -157,7 +164,11 @@ public class Semantico implements Constants
                 operatorStack.push(op);
                 break;
             }
-            case 21: // reduce binary expression — type check
+            case 21: // reduce multiplicative binary expression — type check
+            case 24: // reduce additive binary expression — type check
+            case 25: // reduce relational binary expression — type check
+            case 26: // reduce equality binary expression — type check
+            case 27: // reduce logical binary expression — type check
             {
                 Literal right = literalStack.pop();
                 Literal left = literalStack.pop();

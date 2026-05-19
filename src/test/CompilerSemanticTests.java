@@ -78,12 +78,6 @@ public class CompilerSemanticTests {
         assertSuccess(code);
     }
 
-    // Expressões aritmeticas
-
-    // Expressoes relacionais
-
-    // Expressoes logicas
-
     // Desvio condicional simples (somente if)
     @Test
     void testSimpleIf() {

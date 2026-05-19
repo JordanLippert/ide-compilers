@@ -39,6 +39,9 @@ while = variable : "while"
 for = variable : "for"
 do = variable : "do"
 return = variable : "return"
+true = variable : "true"
+false = variable : "false"
+null = variable : "null"
 
 read = variable : "read"
 write = variable : "write"
@@ -50,9 +53,6 @@ hex_number: 0x[0-9a-fa-f]+
 real_number: [0-9]+\.[0-9]+
 char_literal: '[^']'
 string_literal: \"[^\"]*\"
-true: "true"
-false: "false"
-null: "null"
 
 // OPERATORS
 bit_shift_left: "<<"
@@ -293,7 +293,7 @@ void = variable : "void"
   
 <declarator> ::=
   variable #11
-  | variable #11 equals <expression> #22
+  | variable #11 equals <expression>
   | variable #11 open_bracket <vector_declaration_opt> close_bracket <vector_initializer_opt>;
 
     
@@ -339,6 +339,7 @@ void = variable : "void"
 
 <for_init> ::= 
   <variable_declaration> 
+  | <expression_list>
   | <empty>;
 
 
@@ -395,7 +396,7 @@ void = variable : "void"
 
 
 <logical> ::=
-  <logical> <logical_operator> <bitwise> #21
+  <logical> <logical_operator> <bitwise> #27
   | <bitwise>;
 
 
@@ -405,12 +406,12 @@ void = variable : "void"
 
 
 <equality> ::= 
-  <equality> <equality_operator> <relational> #21
+  <equality> <equality_operator> <relational> #26
   | <relational>;
 
 
 <relational> ::=
-  <relational> <relational_operator> <shift> #21
+  <relational> <relational_operator> <shift> #25
   | <shift>;
 
 
@@ -420,7 +421,7 @@ void = variable : "void"
 
 
 <additive> ::=
-  <additive> <additive_operator> <multiplicative> #21
+  <additive> <additive_operator> <multiplicative> #24
   | <multiplicative>;
 
 
