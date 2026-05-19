@@ -16,8 +16,8 @@ Parser = SLR
 :[\n\t\r\s]
 
 // COMMENTS
-line_comment: [/][/][^\n\r]*
-block_comment: "/*" ([^"*"] | "*"+[^/])* "*/"
+: [/][/][^\n\r]*
+: "/*" ([^"*"] | "*"+[^/])* "*/"
 
 // IDENTIFIERS AND KEYWORDS
 variable: [a-zA-Z_][a-zA-Z0-9_]*
@@ -108,8 +108,14 @@ void = variable : "void"
 <literal>
 <assignment_operator>
 <prefix_unary>
-<comment>
 <variable_type>
+<logical_operator>
+<bitwise_operator>
+<equality_operator>
+<relational_operator>
+<shift_operator>
+<additive_operator>
+<multiplicative_operator>
 <block>
 <statement>
 <statement_list>
@@ -139,9 +145,7 @@ void = variable : "void"
 <expression>
 <assignment>
 <logical>
-<bitwise_or>
-<bitwise_xor>
-<bitwise_and>
+<bitwise>
 <equality>
 <relational>
 <shift>
@@ -155,20 +159,23 @@ void = variable : "void"
 <output_statement>
 <output_list>
 <output_item>
+<assign_target>
+<scope_open>
+<scope_close>
 #Grammar
 <empty> ::= î;
 
 
 <literal> ::=
-      number
-    | binary_number
-    | hex_number
-    | real_number
-    | char_literal
-    | string_literal
-    | true
-    | false
-    | null;
+  number #0
+  | binary_number #2
+  | hex_number #3
+  | real_number #4
+  | char_literal #5
+  | string_literal #6
+  | true #7
+  | false #8
+  | null #9;
 
 
 <assignment_operator> ::=
@@ -189,51 +196,92 @@ void = variable : "void"
   | decrement;
 
 
-<comment> ::= 
-     line_comment
-    | block_comment;
-
-    
 <variable_type> ::= 
-  bool 
-  | short 
-  | int 
-  | long 
-  | float 
-  | double 
-  | decimal 
-  | char 
-  | string;
+  bool #10
+  | short #10
+  | int #10
+  | long #10
+  | float #10
+  | double #10
+  | decimal #10
+  | char #10
+  | string #10;
+
+
+<logical_operator> ::=
+  and #20
+  | or #20;
+
+
+<bitwise_operator> ::=
+  bit_or 
+  | bit_xor
+  | bit_and;
+
+
+<equality_operator> ::= 
+  equality #19
+  | inequality #19;
+
+
+<relational_operator> ::=
+  greater_than #19
+  | less_than #19
+  | greater_equal #19
+  | less_equal #19;
+
+
+<shift_operator> ::= 
+ bit_shift_left
+  | bit_shift_right;
+
+
+<additive_operator> ::=
+ addition #17
+  | subtraction #17;
+
+
+<multiplicative_operator> ::=
+ multiplication #18
+  | division #18
+  | remainder #18;
 
 
 <block> ::= 
-  open_brace close_brace 
-  | open_brace <statement_list> close_brace;
+  <scope_open> <scope_close>
+  | <scope_open> <statement_list> <scope_close>;
+
+  <scope_open> ::= open_brace #15;
+  <scope_close> ::= close_brace #16;
 
 
 <program> ::= <statement_list>;
 
 
 <statement> ::= 
-      <variable_declaration> semicolon
-    | <expression> semicolon
-    | return <expression> semicolon
-    | <conditional_statement>
-    | <loop_statement>
-    | <input_statement>
-    | <output_statement>
-    | <function_definition>
-    | <comment>;
+  <variable_declaration> semicolon
+  | <expression> semicolon
+  | return <expression> semicolon
+  | <conditional_statement>
+  | <loop_statement>
+  | <input_statement>
+  | <output_statement>
+  | <function_definition>;
 
     
 <statement_list> ::= 
-    <statement_list> <statement>
+  <statement_list> <statement>
   | <statement>;
     
 
 <variable_access> ::= 
-  variable
+  variable #12
   | variable open_bracket <expression> close_bracket;
+
+
+<assign_target> ::=
+    variable #14;
+
 
 <variable_declaration> ::= <variable_type> <declarator_list>;
 
@@ -244,9 +292,9 @@ void = variable : "void"
 
   
 <declarator> ::=
-      variable
-    | variable equals <expression>
-    | variable open_bracket <vector_declaration_opt> close_bracket <vector_initializer_opt>;
+  variable #11
+  | variable #11 equals <expression>
+  | variable #11 open_bracket <vector_declaration_opt> close_bracket <vector_initializer_opt>;
 
     
 <vector_declaration_opt> ::= 
@@ -276,8 +324,8 @@ void = variable : "void"
 
 <loop_statement> ::= 
   <while_loop>
- | <do_while_loop>
- | <for_loop>;
+  | <do_while_loop>
+  | <for_loop>;
 
 
 <while_loop> ::= while open_parentheses <expression> close_parentheses <block>;
@@ -295,12 +343,12 @@ void = variable : "void"
 
 
 <for_update> ::= 
-    <expression_list>
+  <expression_list>
   | <empty>;
 
 
 <function_definition> ::= 
-   void variable open_parentheses <parameter_list_opt> close_parentheses <block>
+  void variable open_parentheses <parameter_list_opt> close_parentheses <block>
   | <variable_type> variable open_parentheses <parameter_list_opt> close_parentheses <block>;
 
 
@@ -333,7 +381,7 @@ void = variable : "void"
 
 
 <expression_list> ::=
-    <expression>
+  <expression>
   | <expression_list> comma <expression>;
 
 
@@ -341,53 +389,43 @@ void = variable : "void"
 
 
 <assignment> ::=
-      <variable_access> <assignment_operator> <assignment>
-    | <logical>;
+  <assign_target> <assignment_operator> <assignment> #13
+  | <assign_target> open_bracket <expression> close_bracket <assignment_operator> <assignment> #13
+  | <logical>;
 
 
 <logical> ::=
-      <logical> and <bitwise_or>
-    | <logical> or <bitwise_or>
-    | <bitwise>;
+  <logical> <logical_operator> <bitwise> #21
+  | <bitwise>;
 
 
 <bitwise> ::=
-      <bitwise> bit_or <equality>
-      <bitwise> bit_xor <equality>
-      <bitwise> bit_and <equality>
-    | <equality>;
+  <bitwise> <bitwise_operator> <equality>
+  | <equality>;
 
 
 <equality> ::= 
-  <equality> equality <relational>
-  | <equality> inequality <relational>
+  <equality> <equality_operator> <relational> #21
   | <relational>;
 
 
 <relational> ::=
-    <relational> greater_than <shift>
-    | <relational> less_than <shift>
-    | <relational> greater_equal <shift>
-    | <relational> less_equal <shift>
-    | <shift>;
+  <relational> <relational_operator> <shift> #21
+  | <shift>;
 
 
 <shift> ::= 
-  <shift> bit_shift_left <additive>
-  | <shift> bit_shift_right <additive>
+  <shift> <shift_operator> <additive>
   | <additive>;
 
 
 <additive> ::=
-    <additive> addition <multiplicative>
-    | <additive> subtraction <multiplicative>
+  <additive> <additive_operator> <multiplicative> #21
     | <multiplicative>;
 
 
 <multiplicative> ::=
-      <multiplicative> multiplication <unary_expression>
-    | <multiplicative> division <unary_expression>
-    | <multiplicative> remainder <unary_expression>
+  <multiplicative> <multiplicative_operator> <unary_expression> #21
     | <unary_expression>;
 
 
@@ -397,13 +435,13 @@ void = variable : "void"
 
 
 <postfix_expression> ::=
-    <primary>
+  <primary>
   | <postfix_expression> increment
   | <postfix_expression> decrement;
 
 
 <primary> ::= 
-    <literal>
+  <literal>
   | <variable_access>
   | <function_call>
   | open_parentheses <expression> close_parentheses;
