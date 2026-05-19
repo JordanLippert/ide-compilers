@@ -5,16 +5,13 @@ import java.util.*;
 public class Semantico implements Constants
 {
     private final Stack<Literal> literalStack = new Stack<>();
-    private final Stack<Object> scopeStack = new Stack<>();
+    private final Stack<Scope> scopeStack = new Stack<>();
 
     private final List<Symbol> symbolsTable = new ArrayList<>();
-    private final List<Scope> scopesTable = new ArrayList<>();
 
     private SymbolType currentSymbolType = null;
-    private Scope currentScope = new Scope("global", null);
+    private Scope currentScope = new Scope("global", null, true);
     private Symbol currentSymbol = null;
-
-    // private final HashMap<(SymbolType, SymbolType), List<OperationType>> operationCompatibilityByTypeTable
 
     public void executeAction(int action, Token token)	throws SemanticError
     {
@@ -57,7 +54,7 @@ public class Semantico implements Constants
                 literalStack.push(new Literal(accessedSymbol.type, accessedSymbol.id));
                 break;
             }
-            case 13: // assign variable
+            case 13: // assign value to variable
             {
                 Literal value = literalStack.pop(); //lado direito
                 Literal target = literalStack.pop(); // variavel do lado esquerdo empilhada pelo #14
@@ -66,10 +63,17 @@ public class Semantico implements Constants
                 if (symbol != null) {
                     symbol.isAlredyInitialized = true;
                 }
+
+                // Verifica se o tipo de variáveis são válidos
+                boolean isCompatible = TypeCompatibility.isCompatible(OperationType.Equals, value.type, symbol.type);
+                if(!isCompatible) {
+                    throw new SemanticError("Symbol not compatible in operation: " + symbol.type);
+                }
+
                 literalStack.push(new Literal(symbol.type, target.value));
                 break;
             }
-            case 14: // captura variável do lado esquerdo do assignment
+            case 14: // captura variável do lado esquerdo do assignment (que vai guardar o valor)
             {
                 String variableName = token.getLexeme();
                 Symbol symbol = findSymbol(symbolsTable, variableName, currentScope);
@@ -80,9 +84,28 @@ public class Semantico implements Constants
                 literalStack.push(new Literal(symbol.type, symbol.id));
                 break;
             }
+            case 15: // inicializa um novo escopo
+            {
+                String scopeName = generateNewScopeName();
+                Scope newScope = new Scope(scopeName, currentScope, false);
+                currentScope = newScope;
+                scopeStack.push(newScope);
+                break;
+            }
+            case 16: // encerra o escopo e vai para o escopo pai
+            {
+                currentScope.isClosed = true;
+                currentScope = currentScope.parentScope;
+                break;
+            }
             default:
                 throw new SemanticError("Semantico: Invalid action " + action);
         }
+    }
+
+    private String generateNewScopeName()
+    {
+        return UUID.randomUUID().toString();
     }
 
     private SymbolType getSymbolTypeFromInteger(int type) {
