@@ -164,22 +164,236 @@ public class Semantico implements Constants
                 operatorStack.push(op);
                 break;
             }
-            case 21: // reduce multiplicative binary expression — type check
-            case 24: // reduce additive binary expression — type check
-            case 25: // reduce relational binary expression — type check
-            case 26: // reduce equality binary expression — type check
-            case 27: // reduce logical binary expression — type check
+            case 21: // reduce multiplicative binary expression
+            case 24: // reduce additive binary expression
+            case 25: // reduce relational binary expression
+            case 26: // reduce equality binary expression
+            case 27: // reduce logical binary expression
             {
                 Literal right = literalStack.pop();
                 Literal left = literalStack.pop();
+
                 OperationType op = operatorStack.pop();
 
-                if (!TypeCompatibility.isCompatible(op, left.type, right.type)) {
-                    throw new SemanticError("Tipos incompatíveis para operação '" + op + "': " + left.type + " e " + right.type);
+                Boolean isLiteralCompatible = TypeCompatibility.isCompatible(op, left.type, right.type);
+                if (!isLiteralCompatible) {
+                    throw new SemanticError(
+                            "Tipos incompatíveis para operação '" +
+                                    op +
+                                    "': " +
+                                    left.type +
+                                    " e " +
+                                    right.type
+                    );
                 }
 
-                SymbolType resultType = TypeCompatibility.resultType(op, left.type, right.type);
-                literalStack.push(new Literal(resultType, null));
+                Object result = null;
+                try {
+                    // Only evaluate if both literals have values
+                    if (left.value != null && right.value != null) {
+
+                        switch (op) {
+
+                            // =========================
+                            // LOGICAL
+                            // =========================
+
+                            case And -> {
+
+                                boolean l = Boolean.parseBoolean(left.value.toString());
+                                boolean r = Boolean.parseBoolean(right.value.toString());
+
+                                result = l && r;
+                            }
+
+                            case Or -> {
+
+                                boolean l = Boolean.parseBoolean(left.value.toString());
+                                boolean r = Boolean.parseBoolean(right.value.toString());
+
+                                result = l || r;
+                            }
+
+                            // =========================
+                            // RELATIONAL
+                            // =========================
+
+                            case GreaterThan -> {
+
+                                double l = Double.parseDouble(left.value.toString());
+                                double r = Double.parseDouble(right.value.toString());
+
+                                result = l > r;
+                            }
+
+                            case LessThan -> {
+
+                                double l = Double.parseDouble(left.value.toString());
+                                double r = Double.parseDouble(right.value.toString());
+
+                                result = l < r;
+                            }
+
+                            case GreaterEqual -> {
+
+                                double l = Double.parseDouble(left.value.toString());
+                                double r = Double.parseDouble(right.value.toString());
+
+                                result = l >= r;
+                            }
+
+                            case LessEqual -> {
+
+                                double l = Double.parseDouble(left.value.toString());
+                                double r = Double.parseDouble(right.value.toString());
+
+                                result = l <= r;
+                            }
+
+                            // =========================
+                            // EQUALITY
+                            // =========================
+
+                            case Equality -> {
+
+                                result = Objects.equals(
+                                        left.value,
+                                        right.value
+                                );
+                            }
+
+                            case Inequality -> {
+
+                                result = !Objects.equals(
+                                        left.value,
+                                        right.value
+                                );
+                            }
+
+                            // =========================
+                            // ARITHMETIC
+                            // =========================
+
+                            case Addition -> {
+
+                                double l = Double.parseDouble(left.value.toString());
+                                double r = Double.parseDouble(right.value.toString());
+
+                                result = l + r;
+                            }
+
+                            case Subtraction -> {
+
+                                double l = Double.parseDouble(left.value.toString());
+                                double r = Double.parseDouble(right.value.toString());
+
+                                result = l - r;
+                            }
+
+                            case Multiplication -> {
+
+                                double l = Double.parseDouble(left.value.toString());
+                                double r = Double.parseDouble(right.value.toString());
+
+                                result = l * r;
+                            }
+
+                            case Division -> {
+
+                                double l = Double.parseDouble(left.value.toString());
+                                double r = Double.parseDouble(right.value.toString());
+
+                                if (r == 0) {
+                                    throw new SemanticError(
+                                            "Divisão por zero"
+                                    );
+                                }
+
+                                result = l / r;
+                            }
+
+                            case Remainder -> {
+
+                                double l = Double.parseDouble(left.value.toString());
+                                double r = Double.parseDouble(right.value.toString());
+
+                                result = l % r;
+                            }
+
+                            // =========================
+                            // BITWISE
+                            // =========================
+
+                            case BitAnd -> {
+
+                                int l = Integer.parseInt(left.value.toString());
+                                int r = Integer.parseInt(right.value.toString());
+
+                                result = l & r;
+                            }
+
+                            case BitOr -> {
+
+                                int l = Integer.parseInt(left.value.toString());
+                                int r = Integer.parseInt(right.value.toString());
+
+                                result = l | r;
+                            }
+
+                            case BitXor -> {
+
+                                int l = Integer.parseInt(left.value.toString());
+                                int r = Integer.parseInt(right.value.toString());
+
+                                result = l ^ r;
+                            }
+
+                            case BitShiftLeft -> {
+
+                                int l = Integer.parseInt(left.value.toString());
+                                int r = Integer.parseInt(right.value.toString());
+
+                                result = l << r;
+                            }
+
+                            case BitShiftRight -> {
+
+                                int l = Integer.parseInt(left.value.toString());
+                                int r = Integer.parseInt(right.value.toString());
+
+                                result = l >> r;
+                            }
+
+                            default -> {
+                                // unsupported folding
+                                result = null;
+                            }
+                        }
+                    }
+
+                } catch (NumberFormatException ex) {
+
+                    throw new SemanticError(
+                            "Erro ao avaliar expressão constante"
+                    );
+                }
+
+                SymbolType resultType =
+                        TypeCompatibility.resultType(
+                                op,
+                                left.type,
+                                right.type
+                        );
+
+                literalStack.push(
+                        new Literal(
+                                resultType,
+                                result != null
+                                        ? result.toString()
+                                        : null
+                        )
+                );
+
                 break;
             }
             default:
