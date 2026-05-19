@@ -786,6 +786,44 @@ public class CompilerSemanticTests {
     }
 
     @Test
+    void testSymbolValueCopiedFromVariable() {
+        // int b = a; → b.value deve ser copiado de a.value (action #12 com justDeclared=true)
+        String code = """
+            int a = 10;
+            int b = a;
+            write(b);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+
+        Object[] rowB = result.getSymbolTableRows().stream()
+            .filter(r -> "b".equals(r[0])).findFirst()
+            .orElseThrow(() -> new AssertionError("Símbolo 'b' não encontrado"));
+
+        assertEquals("Sim", rowB[3], "b deveria estar marcado como inicializado");
+        assertEquals(10,    rowB[11], "b.value deveria ser 10 (copiado de a)");
+    }
+
+    @Test
+    void testSymbolValueChainedCopy() {
+        // int c = b onde b = a = 10 → c.value deve ser 10
+        String code = """
+            int a = 10;
+            int b = a;
+            int c = b;
+            write(c);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+
+        Object[] rowC = result.getSymbolTableRows().stream()
+            .filter(r -> "c".equals(r[0])).findFirst()
+            .orElseThrow(() -> new AssertionError("Símbolo 'c' não encontrado"));
+
+        assertEquals(10, rowC[11], "c.value deveria ser 10 (cadeia a→b→c)");
+    }
+
+    @Test
     void testBooleanLiteralValueStored() {
         String code = """
             bool flag = true;

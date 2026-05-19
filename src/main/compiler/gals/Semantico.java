@@ -88,14 +88,15 @@ public class Semantico implements Constants
             }
             case 12: // read variable (access)
             {
-                if (justDeclared && lastDeclaredSymbol != null) {
-                    lastDeclaredSymbol.isAlredyInitialized = true;
-                    justDeclared = false;
-                }
                 String name = token.getLexeme();
                 Symbol sym = findSymbol(symbolsTable, name, currentScope);
                 if (sym == null) {
                     throw new SemanticError("Symbol not found: " + name);
+                }
+                if (justDeclared && lastDeclaredSymbol != null) {
+                    lastDeclaredSymbol.isAlredyInitialized = true;
+                    lastDeclaredSymbol.value = sym.value;
+                    justDeclared = false;
                 }
                 sym.isAlredyUsed = true;
                 literalStack.push(new Literal(sym.type, sym.value));
