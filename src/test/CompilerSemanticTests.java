@@ -5,6 +5,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class CompilerSemanticTests {
@@ -407,5 +409,395 @@ public class CompilerSemanticTests {
             f(10);
         """;
         assertSuccess(code);
+    }
+
+    // ------------------------------------------------------------
+    // Avisos (Warnings) — variável não utilizada e não inicializada
+    // ------------------------------------------------------------
+
+    @Test
+    void testWarningUnusedVariable() {
+        String code = """
+            int unused;
+            int used = 5;
+            write(used);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+        assertTrue(
+            result.getWarnings().stream().anyMatch(w -> w.contains("unused")),
+            "Esperava aviso para variável não utilizada, obtido: " + result.getWarnings()
+        );
+    }
+
+    @Test
+    void testWarningUsedButUninitializedVariable() {
+        // int y = 1 resets justDeclared via #10, so write(x) does NOT falsely mark x as initialized
+        String code = """
+            int x;
+            int y = 1;
+            write(x);
+            write(y);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+        assertTrue(
+            result.getWarnings().stream().anyMatch(w -> w.contains("x") && w.contains("inicializado")),
+            "Esperava aviso de uso sem inicialização, obtido: " + result.getWarnings()
+        );
+    }
+
+    @Test
+    void testNoWarningWhenVariableInitializedAndUsed() {
+        String code = """
+            int x = 10;
+            write(x);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+        assertTrue(
+            result.getWarnings().isEmpty(),
+            "Não deveria ter avisos, obtido: " + result.getWarnings()
+        );
+    }
+
+    // ------------------------------------------------------------
+    // Compatibilidade de tipos
+    // ------------------------------------------------------------
+
+    @Test
+    void testFailsIncompatibleTypeAssignmentBoolToInt() {
+        String code = """
+            int x;
+            bool b = true;
+            x = b;
+        """;
+        assertFailure(code);
+    }
+
+    @Test
+    void testFailsIncompatibleTypeAssignmentStringToInt() {
+        String code = """
+            int x;
+            x = "hello";
+        """;
+        assertFailure(code);
+    }
+
+    @Test
+    void testFailsArithmeticOnBooleans() {
+        String code = """
+            bool a = true;
+            bool b = false;
+            int c;
+            c = a + b;
+        """;
+        assertFailure(code);
+    }
+
+    @Test
+    void testFailsStringMultiplication() {
+        String code = """
+            string a = "hello";
+            string b = "world";
+            string c;
+            c = a * b;
+        """;
+        assertFailure(code);
+    }
+
+    @Test
+    void testFailsLogicalOperatorOnIntegers() {
+        String code = """
+            int a = 1;
+            int b = 2;
+            if (a && b) { write("ok"); }
+        """;
+        assertFailure(code);
+    }
+
+    @Test
+    void testCompatibleNumericWidening() {
+        String code = """
+            int a = 5;
+            float b = 2.0;
+            float c;
+            c = a + b;
+            write(c);
+        """;
+        assertSuccess(code);
+    }
+
+    // ------------------------------------------------------------
+    // Isolamento de escopo
+    // ------------------------------------------------------------
+
+    @Test
+    void testFailsInnerScopeVariableNotAccessibleOutside() {
+        String code = """
+            int a = 1;
+            if (a > 0) {
+                int inner = 10;
+            }
+            write(inner);
+        """;
+        assertFailure(code);
+    }
+
+    @Test
+    void testSameIdentifierInDifferentScopesAllowed() {
+        String code = """
+            int x = 1;
+            if (x > 0) {
+                int x = 2;
+                write(x);
+            }
+            write(x);
+        """;
+        assertSuccess(code);
+    }
+
+    @Test
+    void testInnerScopeCanAccessOuterVariable() {
+        String code = """
+            int outer = 42;
+            if (outer > 0) {
+                write(outer);
+            }
+        """;
+        assertSuccess(code);
+    }
+
+    // ------------------------------------------------------------
+    // Tabela de símbolos — verificação de conteúdo
+    // ------------------------------------------------------------
+
+    @Test
+    void testSymbolTableVariableTypeAndScope() {
+        String code = """
+            int myVar = 42;
+            write(myVar);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+
+        List<Object[]> rows = result.getSymbolTableRows();
+        Object[] row = rows.stream()
+            .filter(r -> "myVar".equals(r[0]))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Símbolo 'myVar' não encontrado na tabela"));
+
+        assertEquals("Integer", row[1], "Tipo deveria ser Integer");
+        assertEquals("global",  row[2], "Escopo deveria ser global");
+        assertEquals("Sim",     row[3], "Deveria estar inicializado");
+        assertEquals("Sim",     row[4], "Deveria estar usado");
+        assertEquals("Não",     row[5], "Não deveria ser parâmetro");
+        assertEquals("Não",     row[7], "Não deveria ser array");
+        assertEquals("Não",     row[10], "Não deveria ser função");
+    }
+
+    @Test
+    void testSymbolTableParameterModality() {
+        String code = """
+            void f(int param) {
+                write(param);
+            }
+            f(1);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+
+        List<Object[]> rows = result.getSymbolTableRows();
+        Object[] row = rows.stream()
+            .filter(r -> "param".equals(r[0]))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Símbolo 'param' não encontrado na tabela"));
+
+        assertEquals("Integer", row[1], "Tipo do parâmetro deveria ser Integer");
+        assertEquals("Sim",     row[3], "Parâmetro deveria estar inicializado");
+        assertEquals("Sim",     row[4], "Parâmetro deveria estar usado");
+        assertEquals("Sim",     row[5], "Deveria ser marcado como parâmetro");
+    }
+
+    @Test
+    void testSymbolTableMultipleVariablesCorrectCount() {
+        String code = """
+            int a = 1;
+            int b = 2;
+            int c = 3;
+            write(a);
+            write(b);
+            write(c);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+
+        List<Object[]> rows = result.getSymbolTableRows();
+        long count = rows.stream()
+            .filter(r -> "a".equals(r[0]) || "b".equals(r[0]) || "c".equals(r[0]))
+            .count();
+        assertEquals(3, count, "Deveriam existir exatamente 3 símbolos (a, b, c)");
+    }
+
+    // ------------------------------------------------------------
+    // Valor dos símbolos — armazenamento e uso em operações
+    // ------------------------------------------------------------
+
+    @Test
+    void testSymbolValueStoredOnLiteralInit() {
+        String code = """
+            int x = 42;
+            write(x);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+
+        Object[] row = result.getSymbolTableRows().stream()
+            .filter(r -> "x".equals(r[0])).findFirst()
+            .orElseThrow(() -> new AssertionError("Símbolo 'x' não encontrado"));
+
+        assertEquals(42, row[11], "Valor de x deveria ser 42 (Integer)");
+    }
+
+    @Test
+    void testSymbolValueStoredOnAssignment() {
+        String code = """
+            int x;
+            int y = 1;
+            x = 99;
+            write(x);
+            write(y);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+
+        Object[] row = result.getSymbolTableRows().stream()
+            .filter(r -> "x".equals(r[0])).findFirst()
+            .orElseThrow(() -> new AssertionError("Símbolo 'x' não encontrado"));
+
+        assertEquals(99, row[11], "Valor de x deveria ser 99 após atribuição");
+    }
+
+    @Test
+    void testSymbolValueUpdatedOnReassignment() {
+        String code = """
+            int x = 1;
+            x = 2;
+            x = 3;
+            write(x);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+
+        Object[] row = result.getSymbolTableRows().stream()
+            .filter(r -> "x".equals(r[0])).findFirst()
+            .orElseThrow(() -> new AssertionError("Símbolo 'x' não encontrado"));
+
+        assertEquals(3, row[11], "Valor de x deveria ser 3 após reatribuições");
+    }
+
+    @Test
+    void testConstantFoldingArithmetic() {
+        String code = """
+            int a = 10;
+            int b = 3;
+            int c;
+            c = a + b;
+            write(c);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+
+        Object[] row = result.getSymbolTableRows().stream()
+            .filter(r -> "c".equals(r[0])).findFirst()
+            .orElseThrow(() -> new AssertionError("Símbolo 'c' não encontrado"));
+
+        assertEquals(13, row[11], "c deveria ser 13 (10 + 3)");
+    }
+
+    @Test
+    void testConstantFoldingMultiplication() {
+        String code = """
+            int a = 4;
+            int b = 5;
+            int c;
+            c = a * b;
+            write(c);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+
+        Object[] row = result.getSymbolTableRows().stream()
+            .filter(r -> "c".equals(r[0])).findFirst()
+            .orElseThrow(() -> new AssertionError("Símbolo 'c' não encontrado"));
+
+        assertEquals(20, row[11], "c deveria ser 20 (4 * 5)");
+    }
+
+    @Test
+    void testConstantFoldingBooleanAnd() {
+        String code = """
+            bool a = true;
+            bool b = true;
+            if (a && b) { write("ok"); }
+        """;
+        assertSuccess(code);
+    }
+
+    @Test
+    void testUninitializedSymbolValueIsNull() {
+        String code = """
+            int x;
+            int y = 1;
+            write(x);
+            write(y);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+
+        Object[] row = result.getSymbolTableRows().stream()
+            .filter(r -> "x".equals(r[0])).findFirst()
+            .orElseThrow(() -> new AssertionError("Símbolo 'x' não encontrado"));
+
+        assertNull(row[11], "Variável não inicializada deveria ter valor null");
+    }
+
+    @Test
+    void testFailsDivisionByZero() {
+        String code = """
+            int a = 10;
+            int b = 0;
+            int c;
+            c = a / b;
+        """;
+        assertFailure(code);
+    }
+
+    @Test
+    void testStringConcatenation() {
+        String code = """
+            string a = "hello";
+            string b = " world";
+            string c;
+            c = a + b;
+            write(c);
+        """;
+        assertSuccess(code);
+    }
+
+    @Test
+    void testBooleanLiteralValueStored() {
+        String code = """
+            bool flag = true;
+            write(flag);
+        """;
+        CompilationResult result = engine.compile(code);
+        assertTrue(result.isSuccess(), "Esperava sucesso");
+
+        Object[] row = result.getSymbolTableRows().stream()
+            .filter(r -> "flag".equals(r[0])).findFirst()
+            .orElseThrow(() -> new AssertionError("Símbolo 'flag' não encontrado"));
+
+        assertEquals(true, row[11], "Valor de flag deveria ser true (Boolean)");
     }
 }

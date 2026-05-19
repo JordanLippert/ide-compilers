@@ -10,6 +10,7 @@ import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.awt.event.ItemEvent;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
@@ -126,6 +127,8 @@ public class CompilerIDE extends JFrame {
         menuBar.setCompileAction(e -> compile());
         menuBar.setClearConsoleAction(e -> consolePanel.clear());
         menuBar.setAboutAction(e -> showAbout());
+        menuBar.setShowSymbolValuesAction(e ->
+            symbolTablePanel.setShowValues(e.getStateChange() == ItemEvent.SELECTED));
 
         editorPanel.addCaretListener(e -> {
             try {

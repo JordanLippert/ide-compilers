@@ -16,17 +16,12 @@ public class Semantico implements Constants
     private Symbol lastDeclaredSymbol = null;
     private boolean justDeclared = false; // tracks if last action was #11 (for init detection)
 
-    private HashMap<Symbol, Object> symbolsValues = new HashMap<>();
 
     public void executeAction(int action, Token token) throws SemanticError
     {
         switch (action) {
             case 0,1,2,3,4,5,6,7,8,9: // push literal onto stack
             {
-                if (justDeclared && lastDeclaredSymbol != null) {
-                    lastDeclaredSymbol.isAlredyInitialized = true;
-                    justDeclared = false;
-                }
                 String lexeme = token.getLexeme();
                 SymbolType type = getSymbolTypeFromInteger(action);
 
@@ -47,13 +42,16 @@ public class Semantico implements Constants
                          Decimal -> Double.parseDouble(lexeme);
                     case Boolean -> Boolean.parseBoolean(lexeme);
                     case Character -> lexeme.charAt(1);
-                    case String -> lexeme.substring(
-                            1,
-                            lexeme.length() - 1
-                    );
+                    case String -> lexeme.substring(1, lexeme.length() - 1);
                     case Null -> null;
                     default -> lexeme;
                 };
+
+                if (justDeclared && lastDeclaredSymbol != null) {
+                    lastDeclaredSymbol.isAlredyInitialized = true;
+                    lastDeclaredSymbol.value = value;
+                    justDeclared = false;
+                }
 
                 literalStack.push(new Literal(type, value));
                 break;
@@ -100,10 +98,7 @@ public class Semantico implements Constants
                     throw new SemanticError("Symbol not found: " + name);
                 }
                 sym.isAlredyUsed = true;
-
-                Object value = symbolsValues.get(sym);
-
-                literalStack.push(new Literal(sym.type, value ));
+                literalStack.push(new Literal(sym.type, sym.value));
                 break;
             }
             case 13: // assign value to variable
@@ -121,9 +116,9 @@ public class Semantico implements Constants
                     throw new SemanticError("Incompatible types: cannot assign " + value.type + " to " + sym.type);
                 }
 
-                symbolsValues.put(sym, value.value);
+                sym.value = value.value;
                 sym.isAlredyInitialized = true;
-                literalStack.push(new Literal(sym.type, target.value));
+                literalStack.push(new Literal(sym.type, sym.value));
                 break;
             }
             case 14: // capture left-hand side of assignment
@@ -230,57 +225,18 @@ public class Semantico implements Constants
                             // LOGICAL
                             // =========================
 
-                            case And -> {
+                            case And -> result = toBool(left.value) && toBool(right.value);
 
-                                boolean l = Boolean.parseBoolean(left.value.toString());
-                                boolean r = Boolean.parseBoolean(right.value.toString());
-
-                                result = l && r;
-                            }
-
-                            case Or -> {
-
-                                boolean l = Boolean.parseBoolean(left.value.toString());
-                                boolean r = Boolean.parseBoolean(right.value.toString());
-
-                                result = l || r;
-                            }
+                            case Or -> result = toBool(left.value) || toBool(right.value);
 
                             // =========================
                             // RELATIONAL
                             // =========================
 
-                            case GreaterThan -> {
-
-                                double l = Double.parseDouble(left.value.toString());
-                                double r = Double.parseDouble(right.value.toString());
-
-                                result = l > r;
-                            }
-
-                            case LessThan -> {
-
-                                double l = Double.parseDouble(left.value.toString());
-                                double r = Double.parseDouble(right.value.toString());
-
-                                result = l < r;
-                            }
-
-                            case GreaterEqual -> {
-
-                                double l = Double.parseDouble(left.value.toString());
-                                double r = Double.parseDouble(right.value.toString());
-
-                                result = l >= r;
-                            }
-
-                            case LessEqual -> {
-
-                                double l = Double.parseDouble(left.value.toString());
-                                double r = Double.parseDouble(right.value.toString());
-
-                                result = l <= r;
-                            }
+                            case GreaterThan  -> result = toDouble(left.value) > toDouble(right.value);
+                            case LessThan     -> result = toDouble(left.value) < toDouble(right.value);
+                            case GreaterEqual -> result = toDouble(left.value) >= toDouble(right.value);
+                            case LessEqual    -> result = toDouble(left.value) <= toDouble(right.value);
 
                             // =========================
                             // EQUALITY
@@ -307,94 +263,34 @@ public class Semantico implements Constants
                             // =========================
 
                             case Addition -> {
-
-                                double l = Double.parseDouble(left.value.toString());
-                                double r = Double.parseDouble(right.value.toString());
-
-                                result = l + r;
+                                if (left.type == SymbolType.String || right.type == SymbolType.String) {
+                                    result = left.value.toString() + right.value.toString();
+                                } else {
+                                    result = toDouble(left.value) + toDouble(right.value);
+                                }
                             }
 
-                            case Subtraction -> {
+                            case Subtraction -> result = toDouble(left.value) - toDouble(right.value);
 
-                                double l = Double.parseDouble(left.value.toString());
-                                double r = Double.parseDouble(right.value.toString());
-
-                                result = l - r;
-                            }
-
-                            case Multiplication -> {
-
-                                double l = Double.parseDouble(left.value.toString());
-                                double r = Double.parseDouble(right.value.toString());
-
-                                result = l * r;
-                            }
+                            case Multiplication -> result = toDouble(left.value) * toDouble(right.value);
 
                             case Division -> {
-
-                                double l = Double.parseDouble(left.value.toString());
-                                double r = Double.parseDouble(right.value.toString());
-
-                                if (r == 0) {
-                                    throw new SemanticError(
-                                            "Divisão por zero"
-                                    );
-                                }
-
-                                result = l / r;
+                                double r = toDouble(right.value);
+                                if (r == 0) throw new SemanticError("Divisão por zero");
+                                result = toDouble(left.value) / r;
                             }
 
-                            case Remainder -> {
-
-                                double l = Double.parseDouble(left.value.toString());
-                                double r = Double.parseDouble(right.value.toString());
-
-                                result = l % r;
-                            }
+                            case Remainder -> result = toDouble(left.value) % toDouble(right.value);
 
                             // =========================
                             // BITWISE
                             // =========================
 
-                            case BitAnd -> {
-
-                                int l = Integer.parseInt(left.value.toString());
-                                int r = Integer.parseInt(right.value.toString());
-
-                                result = l & r;
-                            }
-
-                            case BitOr -> {
-
-                                int l = Integer.parseInt(left.value.toString());
-                                int r = Integer.parseInt(right.value.toString());
-
-                                result = l | r;
-                            }
-
-                            case BitXor -> {
-
-                                int l = Integer.parseInt(left.value.toString());
-                                int r = Integer.parseInt(right.value.toString());
-
-                                result = l ^ r;
-                            }
-
-                            case BitShiftLeft -> {
-
-                                int l = Integer.parseInt(left.value.toString());
-                                int r = Integer.parseInt(right.value.toString());
-
-                                result = l << r;
-                            }
-
-                            case BitShiftRight -> {
-
-                                int l = Integer.parseInt(left.value.toString());
-                                int r = Integer.parseInt(right.value.toString());
-
-                                result = l >> r;
-                            }
+                            case BitAnd       -> result = toInt(left.value) & toInt(right.value);
+                            case BitOr        -> result = toInt(left.value) | toInt(right.value);
+                            case BitXor       -> result = toInt(left.value) ^ toInt(right.value);
+                            case BitShiftLeft  -> result = toInt(left.value) << toInt(right.value);
+                            case BitShiftRight -> result = toInt(left.value) >> toInt(right.value);
 
                             default -> {
                                 // unsupported folding
@@ -410,21 +306,8 @@ public class Semantico implements Constants
                     );
                 }
 
-                SymbolType resultType =
-                        TypeCompatibility.resultType(
-                                op,
-                                left.type,
-                                right.type
-                        );
-
-                literalStack.push(
-                        new Literal(
-                                resultType,
-                                result != null
-                                        ? result.toString()
-                                        : null
-                        )
-                );
+                SymbolType resultType = TypeCompatibility.resultType(op, left.type, right.type);
+                literalStack.push(new Literal(resultType, coerce(result, resultType)));
 
                 break;
             }
@@ -449,19 +332,18 @@ public class Semantico implements Constants
      * Returns symbol table rows for JTable.
      *
      * Columns:
-     * [
-     *   nome,
-     *   tipo,
-     *   escopo,
-     *   inicializado,
-     *   usado,
-     *   parametro,
-     *   posicaoParametro,
-     *   array,
-     *   matriz,
-     *   porReferencia,
-     *   funcao
-     * ]
+     * [0] nome
+     * [1] tipo
+     * [2] escopo
+     * [3] inicializado
+     * [4] usado
+     * [5] parametro
+     * [6] posicaoParametro
+     * [7] array
+     * [8] matriz
+     * [9] porReferencia
+     * [10] funcao
+     * [11] valor (Object, null se não inicializado)
      */
     public List<Object[]> getSymbolTableRows() {
 
@@ -522,7 +404,10 @@ public class Semantico implements Constants
                     // Função
                     Boolean.TRUE.equals(s.isFunction)
                             ? "Sim"
-                            : "Não"
+                            : "Não",
+
+                    // Valor
+                    s.value
             });
         }
 
@@ -559,6 +444,32 @@ public class Semantico implements Constants
             case "double"  -> SymbolType.Double;
             case "decimal" -> SymbolType.Decimal;
             default -> throw new IllegalArgumentException("Unknown type: " + type);
+        };
+    }
+
+    private double toDouble(Object v) {
+        if (v instanceof Number n) return n.doubleValue();
+        return Double.parseDouble(v.toString());
+    }
+
+    private int toInt(Object v) {
+        if (v instanceof Number n) return n.intValue();
+        return Integer.parseInt(v.toString());
+    }
+
+    private boolean toBool(Object v) {
+        if (v instanceof Boolean b) return b;
+        return Boolean.parseBoolean(v.toString());
+    }
+
+    private Object coerce(Object val, SymbolType type) {
+        if (val == null) return null;
+        if (!(val instanceof Number n)) return val;
+        return switch (type) {
+            case Short, Integer -> n.intValue();
+            case Long           -> n.longValue();
+            case Float, Double, Decimal -> n.doubleValue();
+            default -> val;
         };
     }
 
