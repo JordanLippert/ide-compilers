@@ -294,7 +294,7 @@ void = variable : "void"
 <declarator> ::=
   variable #11
   | variable #11 equals <expression>
-  | variable #11 open_bracket <vector_declaration_opt> close_bracket <vector_initializer_opt>;
+  | variable #11 open_bracket <vector_declaration_opt> close_bracket #28 <vector_initializer_opt>;
 
     
 <vector_declaration_opt> ::= 
@@ -348,9 +348,9 @@ void = variable : "void"
   | <empty>;
 
 
-<function_definition> ::= 
-  void variable open_parentheses <parameter_list_opt> close_parentheses <block>
-  | <variable_type> variable open_parentheses <parameter_list_opt> close_parentheses <block>;
+<function_definition> ::=
+  void #30 variable #29 open_parentheses <parameter_list_opt> close_parentheses <block>
+  | <variable_type> variable #29 open_parentheses <parameter_list_opt> close_parentheses <block>;
 
 
 <parameter_list_opt> ::= 
@@ -363,9 +363,9 @@ void = variable : "void"
   | <parameter_list> comma <parameter>;
 
   
-<parameter> ::= 
+<parameter> ::=
   <variable_type> variable #23
-  | <variable_type> variable #23 open_bracket close_bracket;
+  | <variable_type> variable #23 open_bracket close_bracket #28;
 
 
 <function_call> ::= 

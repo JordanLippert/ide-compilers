@@ -2,6 +2,7 @@ package compiler.gals;
 
 public enum SymbolType {
     Null,
+    Void,
     Character,
     String,
     Boolean,

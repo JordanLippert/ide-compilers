@@ -312,6 +312,30 @@ public class Semantico implements Constants
 
                 break;
             }
+            case 28: // mark last declared symbol as array (fires after close_bracket in declarator/parameter)
+            {
+                if (lastDeclaredSymbol != null) {
+                    lastDeclaredSymbol.isArray = true;
+                }
+                break;
+            }
+            case 29: // declare function and insert into symbols table with isFunction = true
+            {
+                String name = token.getLexeme();
+                Symbol newSymbol = new Symbol(name, currentSymbolType, currentScope);
+                newSymbol.isFunction = true;
+                newSymbol.isAlredyInitialized = true;
+                insertIntoSymbolsTable(newSymbol);
+                lastDeclaredSymbol = newSymbol;
+                justDeclared = false;
+                break;
+            }
+            case 30: // void keyword — set currentSymbolType to Void
+            {
+                justDeclared = false;
+                currentSymbolType = SymbolType.Void;
+                break;
+            }
             default:
                 throw new SemanticError("Semantico: Invalid action " + action);
         }
