@@ -73,13 +73,19 @@ public class GalsParserAdapter implements IGalsAdapter {
         this.sourceCode = sourceCode;
 
         try {
+            // Semantic analysis
             Lexico lexico = new Lexico(sourceCode);
             Semantico semantico = new Semantico();
             _sintatico.parse(lexico, semantico);
-
             semantico.generateWarnings();
 
-            return CompilationResult.success(semantico.getWarnings(), semantico.getSymbolTableRows());
+            // Code generation (separate token pass)
+            List<Token> tokenList = collectTokens(sourceCode);
+            compiler.codegen.BipCodeGenerator codeGen =
+                new compiler.codegen.BipCodeGenerator(tokenList, semantico.getSymbolsTable());
+            String asmCode = codeGen.generate();
+
+            return CompilationResult.success(semantico.getWarnings(), semantico.getSymbolTableRows(), asmCode);
         } catch (Exception e) {
             return CompilationResult.error(mapError(e));
         }
@@ -88,6 +94,18 @@ public class GalsParserAdapter implements IGalsAdapter {
     @Override
     public List<Object> getTokens() {
         return new ArrayList<>(tokens);
+    }
+
+    private List<Token> collectTokens(String src) {
+        List<Token> list = new ArrayList<>();
+        try {
+            Lexico lex = new Lexico(src);
+            Token t;
+            while ((t = lex.nextToken()) != null) list.add(t);
+        } catch (Exception ignored) {
+            // return whatever was collected before the error
+        }
+        return list;
     }
 
     private ErrorMessage mapError(Exception e) {

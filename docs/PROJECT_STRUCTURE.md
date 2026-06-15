@@ -24,7 +24,10 @@ ide-compilers/
 │           │   ├── CompilerIDE.java
 │           │   ├── EditorPanel.java
 │           │   ├── ConsolePanel.java
-│           │   └── MenuBar.java
+│           │   ├── SymbolTablePanel.java
+│           │   ├── AsmPanel.java
+│           │   ├── MenuBar.java
+│           │   └── StatusBar.java
 │           │
 │           ├── compiler/           # ⚙️ Engine de Compilação
 │           │   ├── CompilationEngine.java
@@ -33,16 +36,25 @@ ide-compilers/
 │           │   ├── SyntacticPhase.java
 │           │   └── SemanticPhase.java
 │           │
-│           ├── gals/               # 🔧 Classes geradas pelo GALS
+│           ├── codegen/            # ⚙️ Geração de Código BIP
+│           │   └── BipCodeGenerator.java
+│           │
+│           ├── gals/               # 🔧 Classes GALS (léxico/sintático gerados; semântico manual)
 │           │   ├── Lexico.java
 │           │   ├── Sintatico.java
 │           │   ├── Semantico.java
+│           │   ├── Symbol.java
+│           │   ├── Scope.java
+│           │   ├── Literal.java
+│           │   ├── SymbolType.java
+│           │   ├── OperationType.java
+│           │   ├── TypeCompatibility.java
 │           │   ├── Constants.java
 │           │   ├── ParserConstants.java
 │           │   ├── ScannerConstants.java
 │           │   ├── Token.java
 │           │   ├── LexicalError.java
-│           │   ├── SyntaticError.java
+│           │   ├── SyntacticError.java
 │           │   └── SemanticError.java
 │           │
 │           ├── adapter/            # 🔌 Adapter Pattern
@@ -99,10 +111,13 @@ Contém todos os componentes visuais da IDE.
 |--------|------------------|
 | `CompilerIDE.java` | Janela principal, orquestra os componentes |
 | `EditorPanel.java` | Painel de edição de código (JTextPane) |
-| `ConsolePanel.java` | Painel de mensagens (JTextArea) |
+| `ConsolePanel.java` | Painel de mensagens com cores por nível (info/warning/error) |
+| `SymbolTablePanel.java` | Tabela de símbolos pós-compilação (JTable) |
+| `AsmPanel.java` | Exibição read-only do código assembly BIP gerado |
 | `MenuBar.java` | Barra de menu (Novo, Abrir, Salvar, Compilar) |
+| `StatusBar.java` | Linha/coluna do cursor e nome do arquivo |
 
-**Dependências:** `compiler.compiler`, `compiler.factory`
+**Dependências:** `compiler.compiler`, `compiler.factory`, `compiler.model`
 
 ---
 
@@ -187,14 +202,26 @@ Centraliza criação de objetos.
 
 ---
 
+### `compiler.codegen` - Geração de Código BIP
+
+Gera código assembly BIP a partir do programa fonte.
+
+| Classe | Responsabilidade |
+|--------|------------------|
+| `BipCodeGenerator.java` | Parser recursivo-descendente no stream de tokens → BIP assembly |
+
+**Dependências:** `compiler.gals` (Token, Symbol, Constants)
+
+---
+
 ### `compiler.model` - Modelos de Dados
 
 DTOs e classes de modelo.
 
 | Classe | Responsabilidade |
 |--------|------------------|
-| `CompilationResult.java` | Encapsula resultado da compilação |
-| `ErrorMessage.java` | Representa uma mensagem de erro |
+| `CompilationResult.java` | Encapsula resultado: sucesso/erro, warnings, tabela de símbolos, código ASM |
+| `ErrorMessage.java` | Representa uma mensagem de erro com tipo, posição e linha |
 
 **Dependências:** Nenhuma (POJOs)
 
@@ -301,11 +328,12 @@ Ao criar uma nova classe:
 
 ## 📊 Estatísticas do Projeto
 
-**Total estimado de classes:** ~25-30
-- IDE: ~4 classes
-- Compiler: ~5 classes
-- GALS: ~10 classes (geradas)
-- Adapter: ~2 classes
-- Error: ~5 classes
-- Factory: ~2 classes
-- Model: ~2 classes
+**Total de classes:** ~40
+- IDE: 7 classes
+- Compiler (engine): 5 classes
+- GALS: 16 classes (10 geradas + 6 manuais)
+- Codegen: 1 classe
+- Adapter: 2 classes
+- Error: 5 classes
+- Factory: 2 classes
+- Model: 2 classes

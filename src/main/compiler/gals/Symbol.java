@@ -10,6 +10,7 @@ public class Symbol {
     public Boolean isParameter = false;
     public Integer paramterPosition = 0;
     public Boolean isArray = false;
+    public Integer arraySize = null;
     public Boolean isMatrix = false;
     public Boolean isByReference = false;
     public Boolean isFunction = false;

@@ -316,6 +316,12 @@ public class Semantico implements Constants
             {
                 if (lastDeclaredSymbol != null) {
                     lastDeclaredSymbol.isArray = true;
+                    if (!literalStack.isEmpty()) {
+                        Literal sizeLit = literalStack.peek();
+                        if (sizeLit.value instanceof Number n) {
+                            lastDeclaredSymbol.arraySize = n.intValue();
+                        }
+                    }
                 }
                 break;
             }

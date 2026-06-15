@@ -27,6 +27,7 @@ public class CompilerIDE extends JFrame {
     private EditorPanel editorPanel;
     private ConsolePanel consolePanel;
     private SymbolTablePanel symbolTablePanel;
+    private AsmPanel asmPanel;
     private MenuBar menuBar;
     private StatusBar statusBar;
     
@@ -59,6 +60,7 @@ public class CompilerIDE extends JFrame {
         editorPanel = new EditorPanel();
         consolePanel = new ConsolePanel();
         symbolTablePanel = new SymbolTablePanel();
+        asmPanel = new AsmPanel();
         statusBar = new StatusBar();
         menuBar = new MenuBar();
         
@@ -72,15 +74,17 @@ public class CompilerIDE extends JFrame {
     }
     
     private void setupLayout() {
-        // Editor (left) + symbol table (right)
+        JTabbedPane rightTabs = new JTabbedPane();
+        rightTabs.addTab("Tabela de Símbolos", symbolTablePanel);
+        rightTabs.addTab("Código ASM", asmPanel);
+
         JSplitPane editorAndTableSplit = new JSplitPane(
             JSplitPane.HORIZONTAL_SPLIT,
             createEditorSection(),
-            symbolTablePanel
+            rightTabs
         );
-        editorAndTableSplit.setResizeWeight(0.75);
+        editorAndTableSplit.setResizeWeight(0.65);
 
-        // Top (editor+table) + bottom (console)
         JSplitPane mainSplit = new JSplitPane(
             JSplitPane.VERTICAL_SPLIT,
             editorAndTableSplit,
@@ -174,6 +178,13 @@ public class CompilerIDE extends JFrame {
 
             // Update symbol table panel
             symbolTablePanel.update(result.getSymbolTableRows());
+            asmPanel.update(result.getAsmCode());
+            if (result.isSuccess() && result.getAsmCode() != null && !result.getAsmCode().isBlank()) {
+                Container rightTabs = symbolTablePanel.getParent();
+                if (rightTabs instanceof JTabbedPane tabs) {
+                    tabs.setSelectedIndex(1);
+                }
+            }
 
         } catch (Exception ex) {
             consolePanel.appendError("Erro inesperado: " + ex.getMessage());
@@ -185,6 +196,7 @@ public class CompilerIDE extends JFrame {
         if (confirmDiscard()) {
             editorPanel.clear();
             symbolTablePanel.clear();
+            asmPanel.clear();
             currentFile = null;
             updateTitle();
             consolePanel.appendInfo("Novo arquivo criado.");

@@ -2,7 +2,7 @@
 
 ## 🏗️ Visão Geral
 
-O sistema é dividido em três camadas principais:
+O sistema é dividido em quatro camadas principais:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -10,6 +10,8 @@ O sistema é dividido em três camadas principais:
 │              (IDE - GUI)                │
 │  - Editor de Código                     │
 │  - Console de Mensagens                 │
+│  - Tabela de Símbolos                   │
+│  - Painel de Código ASM                 │
 │  - Barra de Menu                        │
 └─────────────────┬───────────────────────┘
                   │
@@ -26,7 +28,13 @@ O sistema é dividido em três camadas principais:
 │         (Classes GALS)                  │
 │  - Analisador Léxico                    │
 │  - Analisador Sintático                 │
-│  - Analisador Semântico (futuro)        │
+│  - Analisador Semântico                 │
+└─────────────────┬───────────────────────┘
+                  │
+┌─────────────────▼───────────────────────┐
+│       CAMADA DE GERAÇÃO DE CÓDIGO       │
+│         (codegen)                       │
+│  - Gerador BIP Assembly                 │
 └─────────────────────────────────────────┘
 ```
 
@@ -40,7 +48,10 @@ O sistema é dividido em três camadas principais:
 - `CompilerIDE.java` - Janela principal da aplicação
 - `EditorPanel.java` - Área de edição de código (JTextPane com fonte 14)
 - `ConsolePanel.java` - Console de mensagens (JTextArea com fonte 14)
+- `SymbolTablePanel.java` - Tabela de símbolos (JTable)
+- `AsmPanel.java` - Painel de exibição do código assembly BIP (read-only, aba ao lado da tabela de símbolos)
 - `MenuBar.java` - Menu com opções (Novo, Abrir, Salvar, Compilar)
+- `StatusBar.java` - Barra de status com posição do cursor e nome do arquivo
 
 **Tecnologia:** Java Swing
 
@@ -50,10 +61,10 @@ O sistema é dividido em três camadas principais:
 
 **Componentes:**
 - `CompilationEngine.java` - Controlador principal que executa as fases
-- `CompilationPhase.java` - Interface Strategy para cada fase
+- `ICompilationPhase.java` - Interface Strategy para cada fase
 - `LexicalPhase.java` - Executa análise léxica
 - `SyntacticPhase.java` - Executa análise sintática
-- `SemanticPhase.java` - Executa análise semântica (futuro)
+- `SemanticPhase.java` - Executa análise semântica + dispara geração de código BIP
 
 **Padrão:** Strategy Pattern
 
@@ -100,36 +111,68 @@ Erro detectado → LexicalErrorHandler → SyntacticErrorHandler
 
 ### 6. GALS Generated Classes
 
-**Responsabilidade:** Realizar análise léxica e sintática
+**Responsabilidade:** Realizar análise léxica, sintática e semântica
 
-**Componentes (gerados automaticamente):**
-- `Lexico.java` - Scanner/Lexer
-- `Sintatico.java` - Parser
-- `Semantico.java` - Semantic Analyzer
+**Componentes:**
+- `Lexico.java` - Scanner/Lexer (gerado pelo GALS)
+- `Sintatico.java` - Parser SLR (gerado pelo GALS)
+- `Semantico.java` - Analisador semântico com tabela de símbolos, type checking e constant folding
+- `Symbol.java` - Representa símbolo na tabela (tipo, escopo, valor, flags de array/função)
+- `Scope.java` - Representa escopo léxico com hierarquia pai
+- `Literal.java` - Valor temporário durante análise de expressões
 - `Token.java` - Classe de token
 - `LexicalError.java` - Exceção léxica
-- `SyntaticError.java` - Exceção sintática
+- `SyntacticError.java` - Exceção sintática
 - `SemanticError.java` - Exceção semântica
 
-**Observação:** Essas classes não devem ser editadas manualmente!
+**Observação:** `Lexico.java` e `Sintatico.java` são gerados pelo GALS e não devem ser editados. `Semantico.java` e demais classes de suporte são mantidas manualmente.
+
+### 7. Code Generation
+
+**Responsabilidade:** Gerar código assembly BIP a partir do programa fonte
+
+**Componentes:**
+- `BipCodeGenerator.java` - Faz varredura recursiva no stream de tokens para produzir código BIP
+
+**Funcionamento:**
+1. Recebe a lista de tokens (da análise léxica) e a tabela de símbolos (da análise semântica)
+2. Seção `.data`: gerada a partir da tabela de símbolos (variáveis, arrays com tamanho)
+3. Seção `.code`: gerada por parser recursivo-descendente no stream de tokens
+
+**Instruções BIP suportadas:**
+- `LDA var` / `LDA #n` — carregar acumulador
+- `STA var` — armazenar acumulador
+- `ADD`, `SUB` — aritmética
+- `AND`, `OR`, `XOR` — operações bit a bit
+- `SHL`, `SHR` — deslocamento
+- `IN var` — leitura de entrada
+- `OUT` — saída do acumulador
+- `HLT` — fim de programa
+- Indexação de arrays: `LDA v[idx]`, `STA v[idx]`, `IN v[idx]`
 
 ## 🔄 Fluxo de Compilação
 
 ```
 1. Usuário digita código no EditorPanel
-2. Usuário clica em "Compilar"
+2. Usuário clica em "Compilar" (ou F9)
 3. CompilerIDE captura o texto do editor
 4. CompilationEngine é invocado
-5. LexicalPhase processa através do GalsParserAdapter
-6. Se houver erros:
-   a. Erro passa pelo Chain of Responsibility
-   b. Para erro sintático, o `GalsParserAdapter` enriquece a mensagem com token encontrado e tokens esperados
-   c. ErrorFormatter formata a mensagem
-   d. Mensagem é exibida no ConsolePanel
-7. Se não houver erros léxicos:
-   a. SyntacticPhase é executada
-   b. Repete processo de erro se necessário
-8. Resultado final é mostrado ao usuário
+5. LexicalPhase — GalsParserAdapter.performLexicalAnalysis()
+   → tokeniza o fonte, armazena tokens
+6. Se houver erros léxicos:
+   → Chain of Responsibility formata e exibe no ConsolePanel
+7. SemanticPhase — GalsParserAdapter.performSemanticAnalysis()
+   a. Parse completo (Lexico + Sintatico + Semantico)
+   b. Semantico constrói tabela de símbolos, faz type checking
+   c. Coleta tokens num segundo pass (collectTokens)
+   d. BipCodeGenerator gera código BIP a partir dos tokens + tabela de símbolos
+   e. Retorna CompilationResult com warnings, symbolTableRows e asmCode
+8. Se houver erros semânticos/sintáticos:
+   → Chain of Responsibility formata e exibe no ConsolePanel
+9. Se sucesso:
+   → ConsolePanel exibe mensagem de sucesso + warnings
+   → SymbolTablePanel exibe tabela de símbolos
+   → AsmPanel exibe código assembly BIP gerado (aba auto-selecionada)
 ```
 
 ## 🎨 Princípios de Design Aplicados
