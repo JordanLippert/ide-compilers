@@ -11,10 +11,9 @@ public class BipCodeGenerator {
 
     private final List<Token> tokens;
     private final List<Symbol> symbolTable;
-    private int pos = 0;
-
     private final List<String> dataLines = new ArrayList<>();
     private final List<String> codeLines = new ArrayList<>();
+    private int pos = 0;
 
     public BipCodeGenerator(List<Token> tokens, List<Symbol> symbolTable) {
         this.tokens = tokens;
@@ -47,7 +46,7 @@ public class BipCodeGenerator {
         while (pos < tokens.size()) {
             parseStatement();
         }
-        emit("HLT");
+        emit("HLT 0");
     }
 
     private void parseStatement() {
@@ -59,150 +58,65 @@ public class BipCodeGenerator {
             skipDeclaration();
             return;
         }
-        if (id == Constants.t_read) { parseReadStatement(); return; }
         if (id == Constants.t_write) { parseWriteStatement(); return; }
         if (id == Constants.t_return) { skipUntilSemicolon(); return; }
         if (id == Constants.t_if || id == Constants.t_while
                 || id == Constants.t_do || id == Constants.t_for) {
             skipBlock(); return;
         }
-        if (id == Constants.t_variable && isAssignmentAhead()) {
-            parseAssignmentStatement(); return;
-        }
         advance();
     }
 
-    private void parseReadStatement() {
-        advance(); // 'read'
-        advance(); // '('
-        while (peek() != null && peek().getId() != Constants.t_close_parentheses) {
-            Token t = peek();
-            if (t.getId() == Constants.t_variable) {
-                String varName = t.getLexeme();
-                advance();
-                if (peek() != null && peek().getId() == Constants.t_open_bracket) {
-                    advance(); // '['
-                    String idx = parseSimplePrimary();
-                    if (peek() != null && peek().getId() == Constants.t_close_bracket) advance();
-                    emit("IN " + varName + "[" + stripHash(idx) + "]");
-                } else {
-                    emit("IN " + varName);
-                }
-            } else if (t.getId() == Constants.t_comma) {
-                advance();
-            } else {
-                advance();
-            }
-        }
-        if (peek() != null) advance(); // ')'
-        if (peek() != null && peek().getId() == Constants.t_semicolon) advance();
-    }
-
+    // Tem que fazer mostrar no console to JPANEL também
     private void parseWriteStatement() {
         advance(); // 'write'
         advance(); // '('
         while (peek() != null && peek().getId() != Constants.t_close_parentheses) {
-            if (peek().getId() == Constants.t_comma) { advance(); continue; }
-            String exprRef = parseExpression();
-            if (exprRef != null) {
-                if (!exprRef.equals("__acc__")) {
-                    emit("LDA " + exprRef);
-                }
-                emit("OUT");
-            }
+            Object result = parseExpression();
+            emit("STO $out_port");
         }
         if (peek() != null) advance(); // ')'
         if (peek() != null && peek().getId() == Constants.t_semicolon) advance();
     }
 
-    private void parseAssignmentStatement() {
-        String varName = peek().getLexeme();
-        advance();
-
-        String indexRef = null;
-        if (peek() != null && peek().getId() == Constants.t_open_bracket) {
-            advance(); // '['
-            indexRef = parseSimplePrimary();
-            if (peek() != null && peek().getId() == Constants.t_close_bracket) advance();
-        }
-
-        if (peek() != null) advance(); // '='
-
-        String exprRef = parseExpression();
-
-        if (exprRef != null) {
-            if (!exprRef.equals("__acc__")) {
-                emit("LDA " + exprRef);
-            }
-            if (indexRef != null) {
-                emit("STA " + varName + "[" + stripHash(indexRef) + "]");
-            } else {
-                emit("STA " + varName);
-            }
-        }
-
-        if (peek() != null && peek().getId() == Constants.t_semicolon) advance();
-    }
-
-    private String parseExpression() {
-        String left = parseSimplePrimary();
+    private Object parseExpression() {
+        Object left = parseSimplePrimary();
         if (left == null) return null;
+        if (left instanceof Integer) {
+            emit("LDI " + left);
+        }
 
         while (peek() != null && isBinaryOperator(peek().getId())) {
             Token opToken = peek();
             advance();
-            String right = parseSimplePrimary();
+            Object right = parseSimplePrimary();
             if (right == null) break;
 
-            if (!left.equals("__acc__")) {
-                emit("LDA " + left);
-            }
-            emit(bipBinaryOp(opToken.getLexeme()) + " " + right);
-            left = "__acc__";
+                emit(bipBinaryOp(opToken.getLexeme()) + (right instanceof Integer ? "I" : "") + " " + right);
         }
 
         return left;
     }
 
-    private String parseSimplePrimary() {
+    private Object parseSimplePrimary() {
         Token t = peek();
         if (t == null) return null;
         int id = t.getId();
 
-        if (id == Constants.t_number) { advance(); return "#" + t.getLexeme(); }
+        if (id == Constants.t_number) { advance(); return Integer.parseInt(t.getLexeme()); }
         if (id == Constants.t_binary_number) {
             advance();
-            return "#" + Long.parseLong(t.getLexeme().substring(2), 2);
+            return Long.parseLong(t.getLexeme().substring(2), 2);
         }
         if (id == Constants.t_hex_number) {
             advance();
-            return "#" + Long.parseLong(t.getLexeme().substring(2), 16);
+            return Long.parseLong(t.getLexeme().substring(2), 16);
         }
-        if (id == Constants.t_real_number) { advance(); return "#" + t.getLexeme(); }
-        if (id == Constants.t_char_literal) { advance(); return "#" + (int) t.getLexeme().charAt(1); }
-        if (id == Constants.t_string_literal) { advance(); return null; }
-        if (id == Constants.t_true) { advance(); return "#1"; }
-        if (id == Constants.t_false) { advance(); return "#0"; }
-        if (id == Constants.t_null) { advance(); return "#0"; }
+        if (id == Constants.t_real_number) { advance(); return t.getLexeme(); }
+        if (id == Constants.t_char_literal) { advance(); return (int) t.getLexeme().charAt(1); }
+        if (id == Constants.t_true) { advance(); return true; }
+        if (id == Constants.t_false) { advance(); return false; }
 
-        if (id == Constants.t_variable) {
-            String varName = t.getLexeme();
-            advance();
-            if (peek() != null && peek().getId() == Constants.t_open_bracket) {
-                advance(); // '['
-                String idx = parseSimplePrimary();
-                if (peek() != null && peek().getId() == Constants.t_close_bracket) advance();
-                emit("LDA " + varName + "[" + stripHash(idx) + "]");
-                return "__acc__";
-            }
-            return varName;
-        }
-        if (id == Constants.t_open_parentheses) {
-            advance();
-            String inner = parseExpression();
-            if (peek() != null && peek().getId() == Constants.t_close_parentheses) advance();
-            return inner;
-        }
         advance();
         return null;
     }
@@ -233,21 +147,6 @@ public class BipCodeGenerator {
             case ">>" -> "SHR";
             default   -> "ADD";
         };
-    }
-
-    private boolean isAssignmentAhead() {
-        int i = pos + 1;
-        if (i < tokens.size() && tokens.get(i).getId() == Constants.t_open_bracket) {
-            int depth = 1;
-            i++;
-            while (i < tokens.size() && depth > 0) {
-                int tid = tokens.get(i).getId();
-                if (tid == Constants.t_open_bracket) depth++;
-                if (tid == Constants.t_close_bracket) depth--;
-                i++;
-            }
-        }
-        return i < tokens.size() && tokens.get(i).getId() == Constants.t_equals;
     }
 
     private void skipDeclaration() {
