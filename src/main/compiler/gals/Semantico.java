@@ -47,12 +47,6 @@ public class Semantico implements Constants
                     default -> lexeme;
                 };
 
-                if (justDeclared && lastDeclaredSymbol != null) {
-                    lastDeclaredSymbol.isAlredyInitialized = true;
-                    lastDeclaredSymbol.value = value;
-                    justDeclared = false;
-                }
-
                 literalStack.push(new Literal(type, value));
                 break;
             }
@@ -92,11 +86,6 @@ public class Semantico implements Constants
                 Symbol sym = findSymbol(symbolsTable, name, currentScope);
                 if (sym == null) {
                     throw new SemanticError("Symbol not found: " + name);
-                }
-                if (justDeclared && lastDeclaredSymbol != null) {
-                    lastDeclaredSymbol.isAlredyInitialized = true;
-                    lastDeclaredSymbol.value = sym.value;
-                    justDeclared = false;
                 }
                 sym.isAlredyUsed = true;
                 literalStack.push(new Literal(sym.type, sym.value));
@@ -340,6 +329,14 @@ public class Semantico implements Constants
             {
                 justDeclared = false;
                 currentSymbolType = SymbolType.Void;
+                break;
+            }
+            case 31: // finalize variable initialization, give the literal to the variable
+            {
+                lastDeclaredSymbol.isAlredyInitialized = true;
+                Literal literal = literalStack.pop();
+                lastDeclaredSymbol.value = literal.value;
+                justDeclared = false;
                 break;
             }
             default:
