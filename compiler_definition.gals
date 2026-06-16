@@ -214,9 +214,9 @@ void = variable : "void"
 
 
 <bitwise_operator> ::=
-  bit_or 
-  | bit_xor
-  | bit_and;
+  bit_or #32
+  | bit_xor #32
+  | bit_and #32;
 
 
 <equality_operator> ::= 
@@ -232,8 +232,8 @@ void = variable : "void"
 
 
 <shift_operator> ::= 
- bit_shift_left
-  | bit_shift_right;
+ bit_shift_left #33
+  | bit_shift_right #33;
 
 
 <additive_operator> ::=
@@ -401,7 +401,7 @@ void = variable : "void"
 
 
 <bitwise> ::=
-  <bitwise> <bitwise_operator> <equality>
+  <bitwise> <bitwise_operator> <equality> #34
   | <equality>;
 
 
@@ -416,7 +416,7 @@ void = variable : "void"
 
 
 <shift> ::= 
-  <shift> <shift_operator> <additive>
+  <shift> <shift_operator> <additive> #35
   | <additive>;
 
 

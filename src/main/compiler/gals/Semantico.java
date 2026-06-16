@@ -186,6 +186,8 @@ public class Semantico implements Constants
             case 25: // reduce relational binary expression
             case 26: // reduce equality binary expression
             case 27: // reduce logical binary expression
+            case 34: // redução bitwise
+            case 35: // redução shift
             {
                 Literal right = literalStack.pop();
                 Literal left = literalStack.pop();
@@ -335,8 +337,44 @@ public class Semantico implements Constants
             {
                 lastDeclaredSymbol.isAlredyInitialized = true;
                 Literal literal = literalStack.pop();
+                lastDeclaredSymbol.initialValue = literal.value;
                 lastDeclaredSymbol.value = literal.value;
                 justDeclared = false;
+                break;
+            }
+            case 32: // empilha o operador bitwise
+            {
+                OperationType op = switch (token.getLexeme())
+                {
+                    case "|" -> OperationType.BitOr;
+                    case "^" -> OperationType.BitXor;
+                    case "&" -> OperationType.BitAnd;
+
+                    default ->
+                            throw new SemanticError(
+                                    "Unknown bitwise operator: "
+                                            + token.getLexeme()
+                            );
+                };
+
+                operatorStack.push(op);
+                break;
+            }
+            case 33: // empilha o operador shift
+            {
+                OperationType op = switch (token.getLexeme())
+                {
+                    case "<<" -> OperationType.BitShiftLeft;
+                    case ">>" -> OperationType.BitShiftRight;
+
+                    default ->
+                            throw new SemanticError(
+                                    "Unknown shift operator: "
+                                            + token.getLexeme()
+                            );
+                };
+
+                operatorStack.push(op);
                 break;
             }
             default:
