@@ -68,7 +68,55 @@ public class BipCodeGenerator {
         if (id == Constants.t_write) { parseWriteStatement(); return; }
         if (id == Constants.t_return) { skipUntilSemicolon(); return; }
         if (id == Constants.t_if) { parseConditionalStatement(); return; }
+        if (id == Constants.t_variable && isAssignmentAhead()) { parseAssignmentStatement(); return; }
         advance();
+    }
+
+    // TODO: Está funcionando somente para váriaves e não para vetores. Deve ser analisado o motivo do erro. Possivelmente erro da gramatica
+    private void parseAssignmentStatement() {
+        String varName = peek().getLexeme();
+        advance(); // variável
+
+        // suporte futuro para vetor
+        boolean isArray = false;
+
+        if (peek() != null &&
+                peek().getId() == Constants.t_open_bracket) {
+
+            isArray = true;
+
+            advance(); // [
+
+            loadArrayIndex();
+
+            if (peek() != null &&
+                    peek().getId() == Constants.t_close_bracket) {
+                advance(); // ]
+            }
+        }
+
+        advance(); // '='
+
+        Object expr = parseExpression();
+
+        if (expr instanceof Integer) {
+            emit("LDI " + expr);
+        }
+        else if (expr instanceof String &&
+                !expr.equals("__acc__")) {
+            emit("LD " + expr);
+        }
+
+        if (isArray) {
+            emit("STOV " + varName);
+        } else {
+            emit("STO " + varName);
+        }
+
+        if (peek() != null &&
+                peek().getId() == Constants.t_semicolon) {
+            advance();
+        }
     }
 
     private void parseReadStatement() {
@@ -190,16 +238,35 @@ public class BipCodeGenerator {
         }
     }
 
-    // Tem que fazer mostrar no console to JPANEL também
     private void parseWriteStatement() {
-        advance(); // 'write'
-        advance(); // '('
-        while (peek() != null && peek().getId() != Constants.t_close_parentheses) {
+        advance(); // write
+        advance(); // (
+
+        while (peek() != null &&
+                peek().getId() != Constants.t_close_parentheses) {
+
             Object result = parseExpression();
+
+            if (result instanceof Integer) {
+                emit("LDI " + result);
+            }
+            else if (result instanceof String) {
+                emit("LD " + result);
+            }
+
             emit("STO $out_port");
+
+            if (peek() != null &&
+                    peek().getId() == Constants.t_comma) {
+                advance();
+            }
         }
-        if (peek() != null) advance(); // ')'
-        if (peek() != null && peek().getId() == Constants.t_semicolon) advance();
+
+        if (peek() != null) advance(); // )
+        if (peek() != null &&
+                peek().getId() == Constants.t_semicolon) {
+            advance();
+        }
     }
 
     private Object parseExpression() {
@@ -285,6 +352,7 @@ public class BipCodeGenerator {
         if (t == null) return null;
         int id = t.getId();
 
+        if (id == Constants.t_variable) { advance(); return t.getLexeme();}
         if (id == Constants.t_number) { advance(); return Integer.parseInt(t.getLexeme()); }
         if (id == Constants.t_binary_number) {
             advance();
@@ -429,5 +497,20 @@ public class BipCodeGenerator {
         }
 
         emit("STO $indr");
+    }
+
+    private boolean isAssignmentAhead() {
+        int i = pos + 1;
+        if (i < tokens.size() && tokens.get(i).getId() == Constants.t_open_bracket) {
+            int depth = 1;
+            i++;
+            while (i < tokens.size() && depth > 0) {
+                int tid = tokens.get(i).getId();
+                if (tid == Constants.t_open_bracket) depth++;
+                if (tid == Constants.t_close_bracket) depth--;
+                i++;
+            }
+        }
+        return i < tokens.size() && tokens.get(i).getId() == Constants.t_equals;
     }
 }
