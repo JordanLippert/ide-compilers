@@ -6,11 +6,8 @@ import compiler.factory.ParserFactory;
 import compiler.model.CompilationResult;
 
 import javax.swing.*;
-import javax.swing.event.CaretEvent;
-import javax.swing.event.CaretListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
-import java.awt.event.ItemEvent;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
@@ -24,24 +21,21 @@ import java.nio.file.Files;
  */
 public class CompilerIDE extends JFrame {
     
+    private static final String TITLE = "IDE Compilador - T2";
+    private static final int DEFAULT_WIDTH = 1200;
+    private static final int DEFAULT_HEIGHT = 800;
     private EditorPanel editorPanel;
     private ConsolePanel consolePanel;
     private SymbolTablePanel symbolTablePanel;
     private AsmPanel asmPanel;
     private MenuBar menuBar;
     private StatusBar statusBar;
-    
     private JButton compileButton;
     private JButton newButton;
     private JButton openButton;
     private JButton saveButton;
-    
     private CompilationEngine compilationEngine;
     private File currentFile;
-    
-    private static final String TITLE = "IDE Compilador - T2";
-    private static final int DEFAULT_WIDTH = 1200;
-    private static final int DEFAULT_HEIGHT = 800;
     
     public CompilerIDE() {
         compilationEngine = ParserFactory.createCompilationEngine();
@@ -51,24 +45,37 @@ public class CompilerIDE extends JFrame {
         setupKeyBindings();
     }
     
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            CompilerIDE ide = new CompilerIDE();
+            ide.setVisible(true);
+        });
+    }
+    
     private void initComponents() {
         setTitle(TITLE);
         setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        
+
         editorPanel = new EditorPanel();
         consolePanel = new ConsolePanel();
         symbolTablePanel = new SymbolTablePanel();
         asmPanel = new AsmPanel();
         statusBar = new StatusBar();
         menuBar = new MenuBar();
-        
+
         compileButton = ComponentFactory.createCompileButton();
         newButton = ComponentFactory.createNewButton();
         openButton = ComponentFactory.createOpenButton();
         saveButton = ComponentFactory.createSaveButton();
-        
+
         setJMenuBar(menuBar);
         updateTitle();
     }
@@ -99,7 +106,7 @@ public class CompilerIDE extends JFrame {
     
     private JPanel createEditorSection() {
         JPanel panel = new JPanel(new BorderLayout());
-        
+
         // Barra de ferramentas
         JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
@@ -108,10 +115,10 @@ public class CompilerIDE extends JFrame {
         toolBar.add(saveButton);
         toolBar.addSeparator();
         toolBar.add(compileButton);
-        
+
         panel.add(toolBar, BorderLayout.NORTH);
         panel.add(editorPanel, BorderLayout.CENTER);
-        
+
         return panel;
     }
     
@@ -121,7 +128,7 @@ public class CompilerIDE extends JFrame {
         newButton.addActionListener(e -> newFile());
         openButton.addActionListener(e -> openFile());
         saveButton.addActionListener(e -> saveFile());
-        
+
         // Ações do menu
         menuBar.setNewAction(e -> newFile());
         menuBar.setOpenAction(e -> openFile());
@@ -131,8 +138,6 @@ public class CompilerIDE extends JFrame {
         menuBar.setCompileAction(e -> compile());
         menuBar.setClearConsoleAction(e -> consolePanel.clear());
         menuBar.setAboutAction(e -> showAbout());
-        menuBar.setShowSymbolValuesAction(e ->
-            symbolTablePanel.setShowValues(e.getStateChange() == ItemEvent.SELECTED));
 
         editorPanel.addCaretListener(e -> {
             try {
@@ -159,14 +164,14 @@ public class CompilerIDE extends JFrame {
     
     private void compile() {
         consolePanel.appendInfo("Iniciando compilação...");
-        
+
         String sourceCode = editorPanel.getText();
-        
+
         if (sourceCode.trim().isEmpty()) {
             consolePanel.appendWarning("Código fonte vazio. Nada para compilar.");
             return;
         }
-        
+
         try {
             CompilationResult result = compilationEngine.compile(sourceCode);
             consolePanel.display(result);
@@ -207,10 +212,10 @@ public class CompilerIDE extends JFrame {
         if (!confirmDiscard()) {
             return;
         }
-        
+
         JFileChooser fileChooser = createFileChooser();
         int result = fileChooser.showOpenDialog(this);
-        
+
         if (result == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
             try {
@@ -236,15 +241,15 @@ public class CompilerIDE extends JFrame {
     private void saveFileAs() {
         JFileChooser fileChooser = createFileChooser();
         int result = fileChooser.showSaveDialog(this);
-        
+
         if (result == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
-            
+
             // Adiciona extensão .txt se não estiver presente
             if (!file.getName().contains(".")) {
                 file = new File(file.getAbsolutePath() + ".txt");
             }
-            
+
             saveToFile(file);
             currentFile = file;
             updateTitle();
@@ -283,7 +288,7 @@ public class CompilerIDE extends JFrame {
                 Versão: 1.0
                 Data: Abril 2026
                 """;
-        
+
         JOptionPane.showMessageDialog(
             this,
             message,
@@ -320,18 +325,5 @@ public class CompilerIDE extends JFrame {
             "Erro",
             JOptionPane.ERROR_MESSAGE
         );
-    }
-    
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            
-            CompilerIDE ide = new CompilerIDE();
-            ide.setVisible(true);
-        });
     }
 }

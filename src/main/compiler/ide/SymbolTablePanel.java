@@ -25,33 +25,17 @@ public class SymbolTablePanel extends JPanel {
             "Array",
             "Matriz",
             "Por Referência",
-            "Função"
-    };
-
-    private static final String[] COLUMNS_WITH_VALUES = {
-            "Nome",
-            "Tipo",
-            "Escopo",
-            "Inicializado",
-            "Usado",
-            "Parâmetro",
-            "Posição Parâmetro",
-            "Array",
-            "Matriz",
-            "Por Referência",
             "Função",
             "Valor"
     };
 
-    private final DefaultTableModel tableModel;
-    private final JTable table;
-
-    private boolean showValues = false;
-    private List<Object[]> lastRows = new ArrayList<>();
-
     private static final Color BG_DARK    = new Color(33, 37, 43);
     private static final Color BG_HEADER  = new Color(40, 44, 52);
     private static final Color FG_TEXT    = new Color(171, 178, 191);
+    private final DefaultTableModel tableModel;
+    private final JTable table;
+    private boolean showValues = false;
+    private List<Object[]> lastRows = new ArrayList<>();
 
     public SymbolTablePanel() {
         setLayout(new BorderLayout());
@@ -110,7 +94,7 @@ public class SymbolTablePanel extends JPanel {
 
     public void setShowValues(boolean show) {
         this.showValues = show;
-        tableModel.setColumnIdentifiers(show ? COLUMNS_WITH_VALUES : COLUMNS);
+        tableModel.setColumnIdentifiers(COLUMNS);
         repopulate();
         applyColumnWidths();
     }

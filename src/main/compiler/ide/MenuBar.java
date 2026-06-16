@@ -2,7 +2,6 @@ package compiler.ide;
 
 import javax.swing.*;
 import java.awt.event.ActionListener;
-import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 
 /**
@@ -29,7 +28,6 @@ public class MenuBar extends JMenuBar {
     public MenuBar() {
         createFileMenu();
         createBuildMenu();
-        createViewMenu();
         createHelpMenu();
     }
     
@@ -86,18 +84,6 @@ public class MenuBar extends JMenuBar {
         add(buildMenu);
     }
     
-    private void createViewMenu() {
-        JMenu viewMenu = new JMenu("Exibir");
-        viewMenu.setMnemonic(KeyEvent.VK_E);
-
-        showSymbolValuesItem = new JCheckBoxMenuItem("Mostrar Valores na Tabela de Símbolos");
-        showSymbolValuesItem.setMnemonic(KeyEvent.VK_V);
-
-        viewMenu.add(showSymbolValuesItem);
-
-        add(viewMenu);
-    }
-
     private void createHelpMenu() {
         JMenu helpMenu = new JMenu("Ajuda");
         helpMenu.setMnemonic(KeyEvent.VK_J);
@@ -141,9 +127,5 @@ public class MenuBar extends JMenuBar {
     
     public void setAboutAction(ActionListener action) {
         aboutItem.addActionListener(action);
-    }
-
-    public void setShowSymbolValuesAction(ItemListener listener) {
-        showSymbolValuesItem.addItemListener(listener);
     }
 }
