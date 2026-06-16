@@ -95,23 +95,22 @@ public class BipCodeGenerator {
         advance();
     }
 
-    // TODO: Está funcionando somente para váriaves e não para vetores. Deve ser analisado o motivo do erro. Possivelmente erro da gramatica
     // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
     private void parseAssignmentStatement() {
         String varName = peek().getLexeme();
         advance(); // variável
 
-        // suporte futuro para vetor
         boolean isArray = false;
 
         if (peek() != null &&
                 peek().getId() == Constants.t_open_bracket) {
 
             isArray = true;
-
             advance(); // [
 
-            loadArrayIndex();
+            // index expression → ACC, save in temp1
+            emitArrayIndexLoad();
+            emit("STO temp1");
 
             if (peek() != null &&
                     peek().getId() == Constants.t_close_bracket) {
@@ -122,13 +121,16 @@ public class BipCodeGenerator {
         advance(); // '='
 
         Object expr = parseExpression();
-        if (!(expr instanceof String &&
-                expr.equals("__acc__"))) {
-
+        if (!(expr instanceof String && expr.equals("__acc__"))) {
             loadOperand(expr);
         }
 
         if (isArray) {
+            // RHS in ACC → temp2, then restore index to $indr, reload RHS, STOV
+            emit("STO temp2");
+            emit("LD temp1");
+            emit("STO $indr");
+            emit("LD temp2");
             emit("STOV " + varName);
         } else {
             emit("STO " + varName);
@@ -137,6 +139,21 @@ public class BipCodeGenerator {
         if (peek() != null &&
                 peek().getId() == Constants.t_semicolon) {
             advance();
+        }
+    }
+
+    private void emitArrayIndexLoad() {
+        Token idx = peek();
+        if (idx == null) throw new IllegalStateException("Índice ausente");
+
+        if (idx.getId() == Constants.t_number) {
+            advance();
+            emit("LDI " + idx.getLexeme());
+        } else if (idx.getId() == Constants.t_variable) {
+            advance();
+            emit("LD " + idx.getLexeme());
+        } else {
+            throw new IllegalStateException("Índice inválido: " + idx.getLexeme());
         }
     }
 
@@ -392,7 +409,21 @@ public class BipCodeGenerator {
         if (t == null) return null;
         int id = t.getId();
 
-        if (id == Constants.t_variable) { advance(); return t.getLexeme();}
+        if (id == Constants.t_variable) {
+            String varName = t.getLexeme();
+            advance();
+            if (peek() != null && peek().getId() == Constants.t_open_bracket) {
+                advance(); // [
+                emitArrayIndexLoad();
+                emit("STO $indr");
+                emit("LDV " + varName);
+                if (peek() != null && peek().getId() == Constants.t_close_bracket) {
+                    advance(); // ]
+                }
+                return "__acc__";
+            }
+            return varName;
+        }
         if (id == Constants.t_number) { advance(); return Integer.parseInt(t.getLexeme()); }
         if (id == Constants.t_binary_number) {
             advance();
@@ -575,6 +606,7 @@ public class BipCodeGenerator {
             emit("LDI " + operand);
         }
         else if (operand instanceof String) {
+            if (operand.equals("__acc__")) return;
             emit("LD " + operand);
         }
     }
