@@ -5,15 +5,21 @@ import compiler.gals.Symbol;
 import compiler.gals.Token;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class BipCodeGenerator {
+    private final static List<Integer> _relationalOPerationConstants = Arrays.asList(Constants.t_greater_than, Constants.t_less_than,Constants.t_greater_equal,Constants.t_less_equal,Constants.t_equality,Constants.t_inequality);
+
 
     private final List<Token> tokens;
     private final List<Symbol> symbolTable;
     private final List<String> dataLines = new ArrayList<>();
     private final List<String> codeLines = new ArrayList<>();
     private int pos = 0;
+    private int _ifsCount = 1;
+    private boolean _conditionalStatement = false;
+    private String _conditionalFalseLabel;
 
     public BipCodeGenerator(List<Token> tokens, List<Symbol> symbolTable) {
         this.tokens = tokens;
@@ -60,11 +66,64 @@ public class BipCodeGenerator {
         }
         if (id == Constants.t_write) { parseWriteStatement(); return; }
         if (id == Constants.t_return) { skipUntilSemicolon(); return; }
-        if (id == Constants.t_if || id == Constants.t_while
-                || id == Constants.t_do || id == Constants.t_for) {
-            skipBlock(); return;
-        }
+        if (id == Constants.t_if) { parseConditionalStatement(); return; }
         advance();
+    }
+
+    private void parseConditionalStatement() {
+        _conditionalStatement = true;
+
+        int ifId = _ifsCount++;
+
+        advance(); // if
+        advance(); // (
+
+        parseExpression();
+
+        advance(); // )
+
+        parseBlock();
+
+        Token next = peek();
+
+        boolean hasElse =
+                next != null &&
+                        next.getId() == Constants.t_else;
+
+        if (hasElse) {
+            String elseLabel = "ELSE" + ifId;
+            String endLabel  = "FIMSE" + ifId;
+            replaceLastFalseJumpTarget(elseLabel);
+            emit("JMP " + endLabel);
+            codeLines.add(elseLabel + ":");
+            advance(); // else
+            parseBlock();
+            codeLines.add(endLabel + ":");
+        }
+        else {
+            String endLabel = "FIMSE" + ifId;
+            replaceLastFalseJumpTarget(endLabel);
+            codeLines.add(endLabel + ":");
+        }
+
+        _conditionalStatement = false;
+    }
+
+    private void parseBlock() {
+        if (peek() != null &&
+                peek().getId() == Constants.t_open_brace) {
+            advance();
+        }
+
+        while (peek() != null &&
+                peek().getId() != Constants.t_close_brace) {
+            parseStatement();
+        }
+
+        if (peek() != null &&
+                peek().getId() == Constants.t_close_brace) {
+            advance();
+        }
     }
 
     // Tem que fazer mostrar no console to JPANEL também
@@ -82,20 +141,79 @@ public class BipCodeGenerator {
     private Object parseExpression() {
         Object left = parseSimplePrimary();
         if (left == null) return null;
-        if (left instanceof Integer) {
-            emit("LDI " + left);
-        }
 
-        while (peek() != null && isBinaryOperator(peek().getId())) {
-            Token opToken = peek();
-            advance();
-            Object right = parseSimplePrimary();
-            if (right == null) break;
-
+        while (peek() != null) {
+            if (isBinaryOperator(peek().getId())) {
+                if (left instanceof Integer) {
+                    emit("LDI " + left);
+                }
+                Token opToken = peek();
+                advance();
+                Object right = parseSimplePrimary();
+                if (right == null) break;
                 emit(bipBinaryOp(opToken.getLexeme()) + (right instanceof Integer ? "I" : "") + " " + right);
+            }
+            else if (isRelationalOperator(peek().getId())) {
+                Token op = advance();
+                Object right = parseSimplePrimary();
+                left = parseRelationalExpression(left, op, right);
+            }
+            else {
+                break;
+            }
         }
 
         return left;
+    }
+
+    private boolean parseRelationalExpression(
+            Object leftExpression,
+            Token op,
+            Object rightExpression)
+    {
+        if (!(leftExpression instanceof Integer)) throw new IllegalArgumentException();
+        if (!(rightExpression instanceof Integer)) throw new IllegalArgumentException();
+
+        int left = (Integer) leftExpression;
+        int right = (Integer) rightExpression;
+
+        // Consider left and right to be always integer for now
+        // TODO: Implementar para quando left e/ou right forem váriaveis ao invés de inteiros
+        emit("LDI " + left);
+        emit("STO temp1");
+        emit("LDI " + right);
+        emit("STO temp2");
+        emit("LD temp1");
+        emit("SUB temp2");
+
+        if (_conditionalStatement) {
+            String branchType = switch (op.getId()) {
+                case Constants.t_equality      -> "BNE";
+                case Constants.t_inequality    -> "BEQ";
+                case Constants.t_less_than     -> "BGT";
+                case Constants.t_greater_than  -> "BLT";
+                case Constants.t_less_equal    -> "BGE";
+                case Constants.t_greater_equal -> "BLE";
+                default ->
+                        throw new IllegalArgumentException(
+                                "Operador relacional inválido: " + op.getLexeme());
+            };
+
+            _conditionalFalseLabel = "__FALSE_IF_" + _ifsCount;
+
+            emit(branchType + " " + _conditionalFalseLabel);
+        }
+
+        return switch (op.getId()) {
+            case Constants.t_equality      -> left == right;
+            case Constants.t_inequality    -> left != right;
+            case Constants.t_less_than     -> left < right;
+            case Constants.t_greater_than  -> left > right;
+            case Constants.t_less_equal    -> left <= right;
+            case Constants.t_greater_equal -> left >= right;
+            default -> throw new IllegalArgumentException(
+                    "Operador relacional inválido: " + op.getLexeme());
+        };
     }
 
     private Object parseSimplePrimary() {
@@ -208,5 +326,25 @@ public class BipCodeGenerator {
         sb.append("\n.code\n");
         for (String line : codeLines) sb.append(line).append("\n");
         return sb.toString();
+    }
+
+    private boolean isRelationalOperator(int id) {
+        return _relationalOPerationConstants.contains(id);
+    }
+
+    private void replaceLastFalseJumpTarget(String target) {
+
+        for (int i = codeLines.size() - 1; i >= 0; i--) {
+
+            String line = codeLines.get(i);
+
+            if (line.contains(_conditionalFalseLabel)) {
+                codeLines.set(
+                        i,
+                        line.replace(_conditionalFalseLabel, target)
+                );
+                return;
+            }
+        }
     }
 }
