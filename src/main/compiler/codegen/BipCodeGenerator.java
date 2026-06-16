@@ -27,12 +27,16 @@ public class BipCodeGenerator {
     }
 
     public String generate() {
+        // TODO: essa função deveria sometne gerar e retornar a string (ou linhas) com toda a seção de dados (.data)
         buildDataSection();
+        // TODO: essa função deveria sometne gerar e retornar a string (ou linhas) com toda a seção de código (.text)
         buildCodeSection();
+        // TODO: Essa função deveria receber como input a saída das duas funções anteriores e gerar o .asm completo
         return formatOutput();
     }
 
     private void buildDataSection() {
+        // TODO: o certo é não utilizar a tabela de símbolos, ser independente dela. O certo seria pegar a inicialização de todas as váriaveis e guardar sometne as variavies com seus valores iniciais
         for (Symbol s : symbolTable) {
             if (Boolean.TRUE.equals(s.isFunction))
                 continue;
@@ -56,7 +60,10 @@ public class BipCodeGenerator {
             }
         }
 
+        // TODO: É errado utilizar __shift_tmp. Deveria ser desnecessário
         dataLines.add("__shift_tmp: 0");
+        // TODO: Transformar os temps em constantes para serem reutilizadas no código. Ao invés de declarar elas aqui, podemos fix endereços especificos para sempre manterem valores temporários, retirando a necessidade de declarar váriaveis temporarias
+        // No Bipide, utilizamos 1000 e 1001 para as variaveis temporarias
         dataLines.add("temp1: 0");
         dataLines.add("temp2: 0");
     }
@@ -64,6 +71,7 @@ public class BipCodeGenerator {
     private void buildCodeSection() {
         pos = 0;
         while (pos < tokens.size()) {
+            // TODO: Deveria alterar o código para passar um statement com entrada a função parseStatement(), sendo a saída o código equivalente em BIP
             parseStatement();
         }
         emit("HLT 0");
@@ -74,6 +82,7 @@ public class BipCodeGenerator {
         if (t == null) return;
         int id = t.getId();
 
+        // TODO: Mudar para switch case
         if (isTypeKeyword(id) || id == Constants.t_void) {
             skipDeclaration();
             return;
@@ -87,6 +96,7 @@ public class BipCodeGenerator {
     }
 
     // TODO: Está funcionando somente para váriaves e não para vetores. Deve ser analisado o motivo do erro. Possivelmente erro da gramatica
+    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
     private void parseAssignmentStatement() {
         String varName = peek().getLexeme();
         advance(); // variável
@@ -130,6 +140,7 @@ public class BipCodeGenerator {
         }
     }
 
+    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
     private void parseReadStatement() {
         advance(); // read
         if (peek() != null &&
@@ -193,6 +204,7 @@ public class BipCodeGenerator {
         }
     }
 
+    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
     private void parseConditionalStatement() {
         _conditionalStatement = true;
 
@@ -232,6 +244,7 @@ public class BipCodeGenerator {
         _conditionalStatement = false;
     }
 
+    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
     private void parseBlock() {
         if (peek() != null &&
                 peek().getId() == Constants.t_open_brace) {
@@ -249,6 +262,7 @@ public class BipCodeGenerator {
         }
     }
 
+    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
     private void parseWriteStatement() {
         advance(); // write
         advance(); // (
@@ -272,6 +286,8 @@ public class BipCodeGenerator {
         }
     }
 
+    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
+    // Analisar se há alguma maneira de simplificar a resolução/redução de expressões
     private Object parseExpression() {
 
         Object left = parseSimplePrimary();
@@ -283,7 +299,7 @@ public class BipCodeGenerator {
         loadOperand(left);
 
         while (peek() != null) {
-
+            // TODO: Melhorar isso para um switch case
             if (isBinaryOperator(peek().getId())) {
 
                 Token opToken = advance();
@@ -296,6 +312,7 @@ public class BipCodeGenerator {
 
                 emitBinaryOperation(opToken, right);
 
+                // TODO: Avaliar se é realmente necessário utilizar este __acc__. Eu gostaria de evitar ele
                 left = "__acc__";
             }
             else if (isRelationalOperator(peek().getId())) {
@@ -318,6 +335,7 @@ public class BipCodeGenerator {
         return "__acc__";
     }
 
+    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
     private boolean parseRelationalExpression(
             Object leftExpression,
             Token op,
@@ -368,6 +386,7 @@ public class BipCodeGenerator {
         };
     }
 
+    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
     private Object parseSimplePrimary() {
         Token t = peek();
         if (t == null) return null;
@@ -392,6 +411,7 @@ public class BipCodeGenerator {
         return null;
     }
 
+    // TODO: O certo seria agrupar todas as constantes de type em um array/list e, parar verificar se um id é uma constante de type, usar list.contain(id)
     private boolean isTypeKeyword(int id) {
         return id == Constants.t_int || id == Constants.t_bool
             || id == Constants.t_short || id == Constants.t_long
@@ -400,6 +420,7 @@ public class BipCodeGenerator {
             || id == Constants.t_string;
     }
 
+    // TODO: O certo seria agrupar todas as constantes de operadores binário em um array/list e, parar verificar se um id é uma constante de type, usar list.contain(id)
     private boolean isBinaryOperator(int id) {
         return id == Constants.t_addition || id == Constants.t_subtraction
             || id == Constants.t_bit_and || id == Constants.t_bit_or
@@ -407,6 +428,7 @@ public class BipCodeGenerator {
             || id == Constants.t_bit_shift_right;
     }
 
+    // TODO: Retirar default. Não faz sentido ao meu ver
     private String bipBinaryOp(String lexeme) {
         return switch (lexeme) {
             case "+"  -> "ADD";
@@ -420,6 +442,7 @@ public class BipCodeGenerator {
         };
     }
 
+    // TODO: Analisar se é realmente necessário
     private void skipDeclaration() {
         advance(); // type keyword or void
         if (peek() != null && peek().getId() == Constants.t_variable) {
@@ -434,11 +457,13 @@ public class BipCodeGenerator {
         skipUntilSemicolon();
     }
 
+    // TODO: Analisar se é realmente necessário
     private void skipUntilSemicolon() {
         while (peek() != null && peek().getId() != Constants.t_semicolon) advance();
         if (peek() != null) advance();
     }
 
+    // TODO: Analisar se é realmente necessário
     private void skipBlock() {
         while (peek() != null && peek().getId() != Constants.t_open_brace
                 && peek().getId() != Constants.t_semicolon) {
@@ -455,23 +480,28 @@ public class BipCodeGenerator {
         }
     }
 
+    // TODO: Analisar se é realmente necessário
     private String stripHash(String ref) {
         if (ref != null && ref.startsWith("#")) return ref.substring(1);
         return ref != null ? ref : "0";
     }
 
+    // TODO: Analisar se é realmente necessário
     private void emit(String instruction) {
         codeLines.add("    " + instruction);
     }
 
+    // TODO: Analisar se é realmente necessário
     private Token peek() {
         return pos < tokens.size() ? tokens.get(pos) : null;
     }
 
+    // TODO: Analisar se é realmente necessário
     private Token advance() {
         return pos < tokens.size() ? tokens.get(pos++) : null;
     }
 
+    // TODO: Deveria receber o .data e o .text como entrada e somente organizar em um arquivo .asm
     private String formatOutput() {
         StringBuilder sb = new StringBuilder();
         sb.append(".data\n");
@@ -485,6 +515,7 @@ public class BipCodeGenerator {
         return _relationalOPerationConstants.contains(id);
     }
 
+    // TODO: Analisar se é realmente necessário
     private void replaceLastFalseJumpTarget(String target) {
 
         for (int i = codeLines.size() - 1; i >= 0; i--) {
@@ -501,6 +532,7 @@ public class BipCodeGenerator {
         }
     }
 
+    // TODO: Analisar se é realmente necessário
     private void loadArrayIndex() {
         Token idx = peek();
 
@@ -520,6 +552,7 @@ public class BipCodeGenerator {
         emit("STO $indr");
     }
 
+    // TODO: Analisar se é realmente necessário
     private boolean isAssignmentAhead() {
         int i = pos + 1;
         if (i < tokens.size() && tokens.get(i).getId() == Constants.t_open_bracket) {
@@ -535,6 +568,7 @@ public class BipCodeGenerator {
         return i < tokens.size() && tokens.get(i).getId() == Constants.t_equals;
     }
 
+    // TODO: Analisar se é realmente necessário
     private void loadOperand(Object operand) {
 
         if (operand instanceof Integer) {
@@ -545,6 +579,7 @@ public class BipCodeGenerator {
         }
     }
 
+    // TODO: Analisar se é realmente necessário
     private void emitBinaryOperation(
             Token operator,
             Object operand)

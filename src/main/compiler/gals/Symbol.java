@@ -4,7 +4,7 @@ public class Symbol {
     public String id;
     public SymbolType type;
     public Scope scope;
-    public Object initialValue;
+    public Object initialValue; // TODO: É desnecessário guardar o valor e o valor incial
     public Object value;
     public Boolean isAlredyInitialized = false;
     public Boolean isAlredyUsed = false;
