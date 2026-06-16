@@ -386,7 +386,7 @@ void = variable : "void"
 
 <assignment> ::=
   variable #14 <assignment_operator> <assignment> #13
-  | variable #14 open_bracket <expression> close_bracket <assignment_operator> <assignment> #13
+  | variable open_bracket <expression> close_bracket <assignment_operator> <assignment>
   | <logical>;
 
 
