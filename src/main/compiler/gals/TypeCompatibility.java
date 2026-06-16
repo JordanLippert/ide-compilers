@@ -77,8 +77,8 @@ public final class TypeCompatibility {
         registerIntegral(OperationType.BitAnd);
         registerIntegral(OperationType.BitOr);
         registerIntegral(OperationType.BitXor);
-        registerIntegral(OperationType.BitShiftLeft);
-        registerIntegral(OperationType.BitShiftRight);
+        registerShift(OperationType.BitShiftLeft);
+        registerShift(OperationType.BitShiftRight);
 
         // Unary bit not
         registerUnaryIntegral(OperationType.BitNot);
@@ -278,5 +278,22 @@ public final class TypeCompatibility {
         }
 
         return compatible.contains(right);
+    }
+
+    private static void registerShift(OperationType op)
+    {
+        SymbolType[] integral = {
+                SymbolType.Short,
+                SymbolType.Integer,
+                SymbolType.Long
+        };
+
+        for (SymbolType left : integral)
+        {
+            for (SymbolType right : integral)
+            {
+                allow(op, left, right);
+            }
+        }
     }
 }

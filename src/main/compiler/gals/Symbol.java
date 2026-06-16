@@ -4,6 +4,7 @@ public class Symbol {
     public String id;
     public SymbolType type;
     public Scope scope;
+    public Object initialValue;
     public Object value;
     public Boolean isAlredyInitialized = false;
     public Boolean isAlredyUsed = false;

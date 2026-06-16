@@ -34,17 +34,31 @@ public class BipCodeGenerator {
 
     private void buildDataSection() {
         for (Symbol s : symbolTable) {
-            if (Boolean.TRUE.equals(s.isFunction)) continue;
-            if (Boolean.TRUE.equals(s.isParameter)) continue;
-
+            if (Boolean.TRUE.equals(s.isFunction))
+                continue;
+            if (Boolean.TRUE.equals(s.isParameter))
+                continue;
             if (Boolean.TRUE.equals(s.isArray)) {
-                int size = s.arraySize != null ? s.arraySize : 10;
+                int size =
+                        s.arraySize != null
+                                ? s.arraySize
+                                : 10;
                 dataLines.add(s.id + ": [" + size + "]");
-            } else {
-                Object initVal = s.value != null ? s.value : 0;
-                dataLines.add(s.id + ": " + initVal);
+            }
+            else {
+                Object initialValue =
+                        s.initialValue != null
+                                ? s.initialValue
+                                : 0;
+                dataLines.add(
+                        s.id + ": " + initialValue
+                );
             }
         }
+
+        dataLines.add("__shift_tmp: 0");
+        dataLines.add("temp1: 0");
+        dataLines.add("temp2: 0");
     }
 
     private void buildCodeSection() {
@@ -98,13 +112,10 @@ public class BipCodeGenerator {
         advance(); // '='
 
         Object expr = parseExpression();
+        if (!(expr instanceof String &&
+                expr.equals("__acc__"))) {
 
-        if (expr instanceof Integer) {
-            emit("LDI " + expr);
-        }
-        else if (expr instanceof String &&
-                !expr.equals("__acc__")) {
-            emit("LD " + expr);
+            loadOperand(expr);
         }
 
         if (isArray) {
@@ -245,15 +256,7 @@ public class BipCodeGenerator {
         while (peek() != null &&
                 peek().getId() != Constants.t_close_parentheses) {
 
-            Object result = parseExpression();
-
-            if (result instanceof Integer) {
-                emit("LDI " + result);
-            }
-            else if (result instanceof String) {
-                emit("LD " + result);
-            }
-
+            parseExpression();
             emit("STO $out_port");
 
             if (peek() != null &&
@@ -270,31 +273,49 @@ public class BipCodeGenerator {
     }
 
     private Object parseExpression() {
+
         Object left = parseSimplePrimary();
-        if (left == null) return null;
+
+        if (left == null) {
+            return null;
+        }
+
+        loadOperand(left);
 
         while (peek() != null) {
+
             if (isBinaryOperator(peek().getId())) {
-                if (left instanceof Integer) {
-                    emit("LDI " + left);
-                }
-                Token opToken = peek();
-                advance();
+
+                Token opToken = advance();
+
                 Object right = parseSimplePrimary();
-                if (right == null) break;
-                emit(bipBinaryOp(opToken.getLexeme()) + (right instanceof Integer ? "I" : "") + " " + right);
+
+                if (right == null) {
+                    break;
+                }
+
+                emitBinaryOperation(opToken, right);
+
+                left = "__acc__";
             }
             else if (isRelationalOperator(peek().getId())) {
+
                 Token op = advance();
+
                 Object right = parseSimplePrimary();
-                left = parseRelationalExpression(left, op, right);
+
+                left = parseRelationalExpression(
+                        left,
+                        op,
+                        right
+                );
             }
             else {
                 break;
             }
         }
 
-        return left;
+        return "__acc__";
     }
 
     private boolean parseRelationalExpression(
@@ -393,8 +414,8 @@ public class BipCodeGenerator {
             case "&"  -> "AND";
             case "|"  -> "OR";
             case "^"  -> "XOR";
-            case "<<" -> "SHL";
-            case ">>" -> "SHR";
+            case "<<" -> "SLL";
+            case ">>" -> "SRL";
             default   -> "ADD";
         };
     }
@@ -512,5 +533,62 @@ public class BipCodeGenerator {
             }
         }
         return i < tokens.size() && tokens.get(i).getId() == Constants.t_equals;
+    }
+
+    private void loadOperand(Object operand) {
+
+        if (operand instanceof Integer) {
+            emit("LDI " + operand);
+        }
+        else if (operand instanceof String) {
+            emit("LD " + operand);
+        }
+    }
+
+    private void emitBinaryOperation(
+            Token operator,
+            Object operand)
+    {
+        switch (operator.getLexeme()) {
+
+            case "<<" -> {
+
+                if (operand instanceof Integer value) {
+
+                    emit("LDI " + value);
+                    emit("STO __shift_tmp");
+                    emit("SLL __shift_tmp");
+                }
+                else {
+                    emit("SLL " + operand);
+                }
+
+                return;
+            }
+
+            case ">>" -> {
+
+                if (operand instanceof Integer value) {
+
+                    emit("LDI " + value);
+                    emit("STO __shift_tmp");
+                    emit("SRL __shift_tmp");
+                }
+                else {
+                    emit("SRL " + operand);
+                }
+
+                return;
+            }
+        }
+
+        String op = bipBinaryOp(operator.getLexeme());
+
+        if (operand instanceof Integer) {
+            emit(op + "I " + operand);
+        }
+        else {
+            emit(op + " " + operand);
+        }
     }
 }
