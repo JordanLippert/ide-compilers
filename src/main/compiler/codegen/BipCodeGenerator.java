@@ -64,10 +64,74 @@ public class BipCodeGenerator {
             skipDeclaration();
             return;
         }
+        if (id == Constants.t_read) { parseReadStatement(); return; }
         if (id == Constants.t_write) { parseWriteStatement(); return; }
         if (id == Constants.t_return) { skipUntilSemicolon(); return; }
         if (id == Constants.t_if) { parseConditionalStatement(); return; }
         advance();
+    }
+
+    private void parseReadStatement() {
+        advance(); // read
+        if (peek() != null &&
+                peek().getId() == Constants.t_open_parentheses) {
+            advance(); // (
+        }
+        while (peek() != null &&
+                peek().getId() != Constants.t_close_parentheses)
+        {
+            Token t = peek();
+
+            if (t.getId() == Constants.t_variable)
+            {
+                String varName = t.getLexeme();
+                advance();
+
+                // read(vetor[indice])
+                if (peek() != null &&
+                        peek().getId() == Constants.t_open_bracket)
+                {
+                    advance(); // [
+
+                    loadArrayIndex();
+
+                    if (peek() != null &&
+                            peek().getId() == Constants.t_close_bracket)
+                    {
+                        advance(); // ]
+                    }
+
+                    emit("LD $in_port");
+                    emit("STOV " + varName);
+                }
+                else
+                {
+                    // read(variavel)
+                    emit("LD $in_port");
+                    emit("STO " + varName);
+                }
+            }
+            else if (t.getId() == Constants.t_comma)
+            {
+                advance();
+            }
+            else
+            {
+                advance();
+            }
+        }
+
+        if (peek() != null &&
+                peek().getId() == Constants.t_close_parentheses)
+        {
+            advance(); // )
+        }
+
+        if (peek() != null &&
+                peek().getId() == Constants.t_semicolon)
+        {
+            advance(); // ;
+        }
     }
 
     private void parseConditionalStatement() {
@@ -323,7 +387,7 @@ public class BipCodeGenerator {
         StringBuilder sb = new StringBuilder();
         sb.append(".data\n");
         for (String line : dataLines) sb.append("    ").append(line).append("\n");
-        sb.append("\n.code\n");
+        sb.append("\n.text\n");
         for (String line : codeLines) sb.append(line).append("\n");
         return sb.toString();
     }
@@ -346,5 +410,24 @@ public class BipCodeGenerator {
                 return;
             }
         }
+    }
+
+    private void loadArrayIndex() {
+        Token idx = peek();
+
+        if (idx.getId() == Constants.t_number) {
+            advance();
+            emit("LDI " + idx.getLexeme());
+        }
+        else if (idx.getId() == Constants.t_variable) {
+            advance();
+            emit("LD " + idx.getLexeme());
+        }
+        else {
+            throw new IllegalStateException(
+                    "Índice inválido: " + idx.getLexeme());
+        }
+
+        emit("STO $indr");
     }
 }
