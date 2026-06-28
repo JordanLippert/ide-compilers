@@ -1,5 +1,5 @@
 
-import compiler.ide.CompilerIDE;
+import ide.CompilerIDE;
 
 import javax.swing.*;
 

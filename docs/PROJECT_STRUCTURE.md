@@ -117,7 +117,7 @@ Contém todos os componentes visuais da IDE.
 | `MenuBar.java` | Barra de menu (Novo, Abrir, Salvar, Compilar) |
 | `StatusBar.java` | Linha/coluna do cursor e nome do arquivo |
 
-**Dependências:** `compiler.compiler`, `compiler.factory`, `compiler.model`
+**Dependências:** `compiler.compiler`, `compiler.builders`, `compiler.models`
 
 ---
 
@@ -133,7 +133,7 @@ Implementa o padrão Strategy para as fases de compilação.
 | `SyntacticPhase.java` | Executa análise sintática |
 | `SemanticPhase.java` | Executa análise semântica (futuro) |
 
-**Dependências:** `compiler.adapter`, `compiler.model`, `compiler.error`
+**Dependências:** `compiler.adapter`, `compiler.models`, `compiler.error`
 
 ---
 
@@ -169,7 +169,7 @@ Isola o sistema das classes geradas pelo GALS.
 | `GalsAdapter.java` | Interface do adapter |
 | `GalsParserAdapter.java` | Implementação concreta |
 
-**Dependências:** `compiler.gals`, `compiler.model`
+**Dependências:** `compiler.gals`, `compiler.models`
 
 ---
 
@@ -185,11 +185,11 @@ Implementa Chain of Responsibility para tratamento de erros.
 | `SyntacticErrorHandler.java` | Processa erros sintáticos |
 | `SemanticErrorHandler.java` | Processa erros semânticos |
 
-**Dependências:** `compiler.model`
+**Dependências:** `compiler.models`
 
 ---
 
-### `compiler.factory` - Factory Pattern
+### `compiler.builders` - Factory Pattern
 
 Centraliza criação de objetos.
 
@@ -202,7 +202,7 @@ Centraliza criação de objetos.
 
 ---
 
-### `compiler.codegen` - Geração de Código BIP
+### `compiler.generators` - Geração de Código BIP
 
 Gera código assembly BIP a partir do programa fonte.
 
@@ -214,7 +214,7 @@ Gera código assembly BIP a partir do programa fonte.
 
 ---
 
-### `compiler.model` - Modelos de Dados
+### `compiler.models` - Modelos de Dados
 
 DTOs e classes de modelo.
 

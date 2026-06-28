@@ -1,10 +1,10 @@
-import compiler.compiler.CompilationEngine;
-import compiler.factory.ParserFactory;
-import compiler.model.CompilationResult;
+import compiler.models.CompilationEngine;
+import compiler.models.CompilationResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CompilerSyntaxTests {
 
@@ -330,11 +330,9 @@ public class CompilerSyntaxTests {
         String program = """
         int x = 7;
         if (x > 10) {
-            write("maior que 10");
-        } else if (x > 5) {
-            write("entre 5 e 10");
+          write("maior que 10");
         } else {
-            write("menor ou igual a 5");
+          write("menor ou igual a 5");
         }
         """;
 

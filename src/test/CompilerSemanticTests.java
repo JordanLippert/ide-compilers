@@ -1,6 +1,5 @@
-import compiler.compiler.CompilationEngine;
-import compiler.factory.ParserFactory;
-import compiler.model.CompilationResult;
+import compiler.models.CompilationEngine;
+import compiler.models.CompilationResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

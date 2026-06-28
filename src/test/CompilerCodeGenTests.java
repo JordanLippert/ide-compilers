@@ -1,6 +1,5 @@
-import compiler.compiler.CompilationEngine;
-import compiler.factory.ParserFactory;
-import compiler.model.CompilationResult;
+import compiler.models.CompilationEngine;
+import compiler.models.CompilationResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +17,7 @@ public class CompilerCodeGenTests {
     private String getAsm(String code) {
         CompilationResult result = engine.compile(code);
         assertTrue(result.isSuccess(), "Compilation failed: " + result.getErrorMessage());
-        String asm = result.getAsmCode();
+        String asm = result.getIntermediateCode();
         assertNotNull(asm, "ASM code is null");
         assertFalse(asm.isBlank(), "ASM code is blank");
         return asm;
