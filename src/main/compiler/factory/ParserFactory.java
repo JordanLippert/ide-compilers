@@ -1,14 +1,14 @@
 package compiler.factory;
 
-import compiler.adapter.IGalsAdapter;
 import compiler.adapter.GalsParserAdapter;
+import compiler.adapter.IGalsAdapter;
+import compiler.codegen.BipCodeGenerator;
+import compiler.codegen.ICodeGenerator;
 import compiler.compiler.CompilationEngine;
 import compiler.compiler.LexicalPhase;
 import compiler.compiler.SemanticPhase;
-import compiler.compiler.SyntacticPhase;
 import compiler.gals.Semantico;
 import compiler.gals.Sintatico;
-import compiler.ide.ConsolePanel;
 
 /**
  * Factory para criação de parsers e engine de compilação
@@ -19,8 +19,9 @@ import compiler.ide.ConsolePanel;
 public class ParserFactory {
     
     public static IGalsAdapter createGalsAdapter() {
+        ICodeGenerator codeGenerator = new BipCodeGenerator();
         Sintatico sintatico = new Sintatico();
-        Semantico semantico = new Semantico();
+        Semantico semantico = new Semantico(codeGenerator);
         return new GalsParserAdapter(sintatico, semantico);
     }
     

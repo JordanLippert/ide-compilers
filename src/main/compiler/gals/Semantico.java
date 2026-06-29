@@ -1,5 +1,7 @@
 package compiler.gals;
 
+import compiler.codegen.ICodeGenerator;
+
 import java.util.*;
 
 public class Semantico implements Constants
@@ -16,6 +18,12 @@ public class Semantico implements Constants
     private Symbol lastDeclaredSymbol = null;
     private boolean justDeclared = false; // tracks if last action was #11 (for init detection)
 
+    private ICodeGenerator _codeGenerator;
+
+    public Semantico(ICodeGenerator codeGenerator)
+    {
+        _codeGenerator = codeGenerator;
+    }
 
     public void executeAction(int action, Token token) throws SemanticError
     {
@@ -63,6 +71,7 @@ public class Semantico implements Constants
                 insertIntoSymbolsTable(newSymbol);
                 lastDeclaredSymbol = newSymbol;
                 justDeclared = true;
+                _codeGenerator.generateVariable(newSymbol);
                 break;
             }
             case 22: // legacy — kept for safety, justDeclared handles init now
@@ -314,6 +323,7 @@ public class Semantico implements Constants
                         }
                     }
                 }
+                _codeGenerator.generateVariable(lastDeclaredSymbol);
                 break;
             }
             case 29: // declare function and insert into symbols table with isFunction = true
@@ -339,6 +349,7 @@ public class Semantico implements Constants
                 Literal literal = literalStack.pop();
                 lastDeclaredSymbol.initialValue = literal.value;
                 lastDeclaredSymbol.value = literal.value;
+                _codeGenerator.generateVariable(lastDeclaredSymbol);
                 justDeclared = false;
                 break;
             }

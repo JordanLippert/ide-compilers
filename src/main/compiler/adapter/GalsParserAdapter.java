@@ -1,14 +1,11 @@
 package compiler.adapter;
 
+import compiler.codegen.BipCodeGenerator;
 import compiler.gals.*;
 import compiler.model.CompilationResult;
 import compiler.model.ErrorMessage;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Stack;
+import java.util.*;
 
 /**
  * Implementação temporária do GalsAdapter
@@ -18,18 +15,56 @@ import java.util.Stack;
  * @author André Melo
  */
 public class GalsParserAdapter implements IGalsAdapter {
-    private String sourceCode;
-    private List<Token> tokens = new ArrayList<>();
     private static final int MAX_EXPECTED_TOKENS = 12;
     private static final int MAX_TERMINAL_TOKEN_ID = resolveMaxTerminalTokenId();
     private static final Map<Integer, String> TOKEN_NAMES = buildTokenNames();
-
     private final Semantico _semantico;
     private final Sintatico _sintatico;
+    private String sourceCode;
+    private List<Token> tokens = new ArrayList<>();
 
     public GalsParserAdapter(Sintatico sintatico, Semantico semantico) {
         this._sintatico = sintatico;
         this._semantico = semantico;
+    }
+
+    private static int resolveMaxTerminalTokenId() {
+        int max = Constants.DOLLAR;
+
+        for (java.lang.reflect.Field field : Constants.class.getFields()) {
+            if (field.getType() == int.class && field.getName().startsWith("t_")) {
+                try {
+                    int value = field.getInt(null);
+                    if (value > max) {
+                        max = value;
+                    }
+                } catch (IllegalAccessException ignored) {
+                    // Interface constants are public, static and final.
+                }
+            }
+        }
+
+        return max;
+    }
+
+    private static Map<Integer, String> buildTokenNames() {
+        Map<Integer, String> names = new HashMap<>();
+        names.put(Constants.DOLLAR, "fim de arquivo");
+
+        for (java.lang.reflect.Field field : Constants.class.getFields()) {
+            if (field.getType() != int.class || !field.getName().startsWith("t_")) {
+                continue;
+            }
+
+            try {
+                int tokenId = field.getInt(null);
+                names.put(tokenId, "'" + field.getName().substring(2) + "'");
+            } catch (IllegalAccessException ignored) {
+                // Interface constants are public, static and final.
+            }
+        }
+
+        return names;
     }
 
     @Override
@@ -56,8 +91,10 @@ public class GalsParserAdapter implements IGalsAdapter {
         this.sourceCode = sourceCode;
 
         try {
+            BipCodeGenerator codeGenerator = new BipCodeGenerator();
+
             Lexico lexico = new Lexico(sourceCode);
-            Semantico dummy = new Semantico();
+            Semantico dummy = new Semantico(codeGenerator);
 
             // TODO: Syntactic analysis may also execute semantic actions. But there may be a way to separate it
             _sintatico.parse(lexico, dummy);
@@ -73,19 +110,23 @@ public class GalsParserAdapter implements IGalsAdapter {
         this.sourceCode = sourceCode;
 
         try {
-            // Semantic analysis
+            BipCodeGenerator codeGenerator = new BipCodeGenerator();
+
+            // 1ª passagem: análise semântica — monta tabela de símbolos e seção .data
             Lexico lexico = new Lexico(sourceCode);
-            Semantico semantico = new Semantico();
+            Semantico semantico = new Semantico(codeGenerator);
             _sintatico.parse(lexico, semantico);
             semantico.generateWarnings();
 
-            // Code generation (separate token pass)
+            // 2ª passagem: geração de código — percorre lista de tokens e emite seção .text
             List<Token> tokenList = collectTokens(sourceCode);
-            compiler.codegen.BipCodeGenerator codeGen =
-                new compiler.codegen.BipCodeGenerator(tokenList, semantico.getSymbolsTable());
-            String asmCode = codeGen.generate();
+            codeGenerator.generateCode(tokenList);
 
-            return CompilationResult.success(semantico.getWarnings(), semantico.getSymbolTableRows(), asmCode);
+            return CompilationResult.success(
+                semantico.getWarnings(),
+                semantico.getSymbolTableRows(),
+                codeGenerator.getAssemblyCode()
+            );
         } catch (Exception e) {
             return CompilationResult.error(mapError(e));
         }
@@ -299,45 +340,6 @@ public class GalsParserAdapter implements IGalsAdapter {
         }
 
         return builder.toString();
-    }
-
-    private static int resolveMaxTerminalTokenId() {
-        int max = Constants.DOLLAR;
-
-        for (java.lang.reflect.Field field : Constants.class.getFields()) {
-            if (field.getType() == int.class && field.getName().startsWith("t_")) {
-                try {
-                    int value = field.getInt(null);
-                    if (value > max) {
-                        max = value;
-                    }
-                } catch (IllegalAccessException ignored) {
-                    // Interface constants are public, static and final.
-                }
-            }
-        }
-
-        return max;
-    }
-
-    private static Map<Integer, String> buildTokenNames() {
-        Map<Integer, String> names = new HashMap<>();
-        names.put(Constants.DOLLAR, "fim de arquivo");
-
-        for (java.lang.reflect.Field field : Constants.class.getFields()) {
-            if (field.getType() != int.class || !field.getName().startsWith("t_")) {
-                continue;
-            }
-
-            try {
-                int tokenId = field.getInt(null);
-                names.put(tokenId, "'" + field.getName().substring(2) + "'");
-            } catch (IllegalAccessException ignored) {
-                // Interface constants are public, static and final.
-            }
-        }
-
-        return names;
     }
 
     private String formatTokenName(int tokenId) {

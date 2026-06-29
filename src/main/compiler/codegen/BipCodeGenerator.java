@@ -4,658 +4,834 @@ import compiler.gals.Constants;
 import compiler.gals.Symbol;
 import compiler.gals.Token;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
-public class BipCodeGenerator {
-    private final static List<Integer> _relationalOPerationConstants = Arrays.asList(Constants.t_greater_than, Constants.t_less_than,Constants.t_greater_equal,Constants.t_less_equal,Constants.t_equality,Constants.t_inequality);
+/**
+ * Gerador de código Assembly para o processador BIP.
+ *
+ * @author Jordan Lippert
+ * @author André Melo
+ */
+public class BipCodeGenerator implements ICodeGenerator {
 
+    private static final Set<Integer> TYPE_KEYWORDS = Set.of(
+        Constants.t_int,     Constants.t_bool,    Constants.t_short,
+        Constants.t_long,    Constants.t_float,   Constants.t_double,
+        Constants.t_decimal, Constants.t_char,    Constants.t_string,
+        Constants.t_void
+    );
+    private static final int TEMP_BASE  = 1000;
+    private static final int PARAM_BASE = 2000;
+    private static final int RET_ADDR   = 2999;
+    // -----------------------------------------------------------------------
+    // Estado interno
+    // -----------------------------------------------------------------------
+    private final Map<String, String>       _variables     = new LinkedHashMap<>();
+    private final List<String>              _textLines     = new ArrayList<>();
+    private final Map<String, List<String>> _functionParams = new LinkedHashMap<>();
+    private List<Token> _tokens;
+    private int _pos;
+    private int _nextTemp;
+    private int _labelCounter;
 
-    private final List<Token> tokens;
-    private final List<Symbol> symbolTable;
-    private final List<String> dataLines = new ArrayList<>();
-    private final List<String> codeLines = new ArrayList<>();
-    private int pos = 0;
-    private int _ifsCount = 1;
-    private boolean _conditionalStatement = false;
-    private String _conditionalFalseLabel;
+    // -----------------------------------------------------------------------
+    // ICodeGenerator — .data
+    // -----------------------------------------------------------------------
+    @Override
+    public void generateVariable(Symbol symbol) {
+        if (symbol == null) throw new IllegalArgumentException("symbol is null");
+        if (Boolean.TRUE.equals(symbol.isFunction)) return;
 
-    public BipCodeGenerator(List<Token> tokens, List<Symbol> symbolTable) {
-        this.tokens = tokens;
-        this.symbolTable = symbolTable;
-    }
-
-    public String generate() {
-        // TODO: essa função deveria sometne gerar e retornar a string (ou linhas) com toda a seção de dados (.data)
-        buildDataSection();
-        // TODO: essa função deveria sometne gerar e retornar a string (ou linhas) com toda a seção de código (.text)
-        buildCodeSection();
-        // TODO: Essa função deveria receber como input a saída das duas funções anteriores e gerar o .asm completo
-        return formatOutput();
-    }
-
-    private void buildDataSection() {
-        // TODO: o certo é não utilizar a tabela de símbolos, ser independente dela. O certo seria pegar a inicialização de todas as váriaveis e guardar sometne as variavies com seus valores iniciais
-        for (Symbol s : symbolTable) {
-            if (Boolean.TRUE.equals(s.isFunction))
-                continue;
-            if (Boolean.TRUE.equals(s.isParameter))
-                continue;
-            if (Boolean.TRUE.equals(s.isArray)) {
-                int size =
-                        s.arraySize != null
-                                ? s.arraySize
-                                : 10;
-                dataLines.add(s.id + ": [" + size + "]");
-            }
-            else {
-                Object initialValue =
-                        s.initialValue != null
-                                ? s.initialValue
-                                : 0;
-                dataLines.add(
-                        s.id + ": " + initialValue
-                );
-            }
+        String entry;
+        if (Boolean.TRUE.equals(symbol.isArray)) {
+            int size = symbol.arraySize != null ? symbol.arraySize : 0;
+            String zeros = "0" + ",0".repeat(Math.max(0, size - 1));
+            entry = symbol.id + ": " + (size > 0 ? zeros : "0");
+        } else {
+            String val = symbol.value != null ? symbol.value.toString() : "0";
+            entry = symbol.id + ": " + val;
         }
-
-        // TODO: É errado utilizar __shift_tmp. Deveria ser desnecessário
-        dataLines.add("__shift_tmp: 0");
-        // TODO: Transformar os temps em constantes para serem reutilizadas no código. Ao invés de declarar elas aqui, podemos fix endereços especificos para sempre manterem valores temporários, retirando a necessidade de declarar váriaveis temporarias
-        // No Bipide, utilizamos 1000 e 1001 para as variaveis temporarias
-        dataLines.add("temp1: 0");
-        dataLines.add("temp2: 0");
+        _variables.put(symbol.id, entry);
     }
 
-    private void buildCodeSection() {
-        pos = 0;
-        while (pos < tokens.size()) {
-            // TODO: Deveria alterar o código para passar um statement com entrada a função parseStatement(), sendo a saída o código equivalente em BIP
+    // -----------------------------------------------------------------------
+    // ICodeGenerator — .text
+    // -----------------------------------------------------------------------
+    @Override
+    public void generateCode(List<Token> tokens) {
+        _tokens       = tokens;
+        _pos          = 0;
+        _nextTemp     = TEMP_BASE;
+        _labelCounter = 0;
+
+        scanArrayInitializers();
+        scanFunctionParameters();
+
+        while (_pos < _tokens.size()) {
             parseStatement();
         }
         emit("HLT 0");
     }
 
+    // -----------------------------------------------------------------------
+    // ICodeGenerator — saída
+    // -----------------------------------------------------------------------
+    @Override
+    public String getAssemblyCode() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(".data\n");
+        for (String entry : _variables.values()) {
+            sb.append("    ").append(entry).append("\n");
+        }
+        sb.append("\n.text\n");
+        // emit() already adds 4-space indent; emitLabel() adds none
+        for (String line : _textLines) {
+            sb.append(line).append("\n");
+        }
+        return sb.toString();
+    }
+
+    // -----------------------------------------------------------------------
+    // Pré-scans
+    // -----------------------------------------------------------------------
+
+    private void scanArrayInitializers() {
+        int n = _tokens.size();
+        for (int i = 0; i < n; i++) {
+            if (!TYPE_KEYWORDS.contains(_tokens.get(i).getId())) continue;
+            if (i+1 >= n || _tokens.get(i+1).getId() != Constants.t_variable) continue;
+            String varName = _tokens.get(i+1).getLexeme();
+            if (i+2 >= n || _tokens.get(i+2).getId() != Constants.t_open_bracket) continue;
+
+            int j = i + 3;
+            while (j < n && _tokens.get(j).getId() != Constants.t_close_bracket) j++;
+            if (j >= n) continue; j++;
+            if (j >= n || _tokens.get(j).getId() != Constants.t_equals) continue; j++;
+            if (j >= n || _tokens.get(j).getId() != Constants.t_open_brace) continue; j++;
+
+            List<String> values = new ArrayList<>();
+            while (j < n && _tokens.get(j).getId() != Constants.t_close_brace) {
+                if (isLiteralToken(_tokens.get(j).getId()))
+                    values.add(_tokens.get(j).getLexeme());
+                j++;
+            }
+            if (!values.isEmpty() && _variables.containsKey(varName))
+                _variables.put(varName, varName + ": " + String.join(",", values));
+        }
+    }
+
+    /** Coleta nomes e tipos de parâmetros de todas as funções definidas no código. */
+    private void scanFunctionParameters() {
+        int n = _tokens.size();
+        for (int i = 0; i < n; i++) {
+            int tid = _tokens.get(i).getId();
+            if (!TYPE_KEYWORDS.contains(tid)) continue;
+            if (i+1 >= n || _tokens.get(i+1).getId() != Constants.t_variable) continue;
+            if (i+2 >= n || _tokens.get(i+2).getId() != Constants.t_open_parentheses) continue;
+
+            String funcName = _tokens.get(i+1).getLexeme();
+            if (_functionParams.containsKey(funcName)) continue;
+
+            List<String> params = new ArrayList<>();
+            int j = i + 3;
+            while (j < n && _tokens.get(j).getId() != Constants.t_close_parentheses) {
+                if (TYPE_KEYWORDS.contains(_tokens.get(j).getId())) {
+                    j++; // skip type
+                    if (j < n && _tokens.get(j).getId() == Constants.t_variable) {
+                        String pName = _tokens.get(j++).getLexeme();
+                        params.add(pName);
+                        _variables.putIfAbsent(pName, pName + ": 0");
+                        // skip [] for array params
+                        if (j < n && _tokens.get(j).getId() == Constants.t_open_bracket) {
+                            while (j < n && _tokens.get(j).getId() != Constants.t_close_bracket) j++;
+                            j++;
+                        }
+                    }
+                } else {
+                    j++;
+                }
+            }
+            _functionParams.put(funcName, params);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Dispatcher de statements
+    // -----------------------------------------------------------------------
     private void parseStatement() {
         Token t = peek();
         if (t == null) return;
         int id = t.getId();
 
-        // TODO: Mudar para switch case
-        if (isTypeKeyword(id) || id == Constants.t_void) {
-            skipDeclaration();
+        if (id == Constants.t_open_brace || id == Constants.t_close_brace) { advance(); return; }
+        if (TYPE_KEYWORDS.contains(id)) { skipDeclaration(); return; }
+
+        if (id == Constants.t_if)     { parseIfStatement();      return; }
+        if (id == Constants.t_while)  { parseWhileStatement();   return; }
+        if (id == Constants.t_do)     { parseDoWhileStatement(); return; }
+        if (id == Constants.t_for)    { parseForStatement();     return; }
+        if (id == Constants.t_return) { parseReturnStatement();  return; }
+        if (id == Constants.t_else)   { advance(); return; }
+        if (id == Constants.t_read)   { parseReadStatement();    return; }
+        if (id == Constants.t_write)  { parseWriteStatement();   return; }
+
+        // Chamada de função como statement: funcname ( args ) ;
+        if (id == Constants.t_variable && isFunctionCallAhead()) {
+            String funcName = advance().getLexeme();
+            advance(); // (
+            _nextTemp = TEMP_BASE;
+            emitFunctionCallArgs(funcName);
+            match(Constants.t_semicolon);
             return;
         }
-        if (id == Constants.t_read) { parseReadStatement(); return; }
-        if (id == Constants.t_write) { parseWriteStatement(); return; }
-        if (id == Constants.t_return) { skipUntilSemicolon(); return; }
-        if (id == Constants.t_if) { parseConditionalStatement(); return; }
-        if (id == Constants.t_variable && isAssignmentAhead()) { parseAssignmentStatement(); return; }
+        if (id == Constants.t_variable && isAssignmentAhead()) {
+            parseAssignmentStatement(); return;
+        }
         advance();
     }
 
-    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
-    private void parseAssignmentStatement() {
-        String varName = peek().getLexeme();
-        advance(); // variável
+    // -----------------------------------------------------------------------
+    // Desvio condicional
+    // -----------------------------------------------------------------------
 
-        boolean isArray = false;
+    private void parseIfStatement() {
+        advance(); // 'if'
+        String branchFalse = parseCondition();
+        String labelFalse  = newLabel("FIMSE");
+        emit(branchFalse + " " + labelFalse);
 
-        if (peek() != null &&
-                peek().getId() == Constants.t_open_bracket) {
+        parseBlock(); // then
 
-            isArray = true;
-            advance(); // [
-
-            // index expression → ACC, save in temp1
-            emitArrayIndexLoad();
-            emit("STO temp1");
-
-            if (peek() != null &&
-                    peek().getId() == Constants.t_close_bracket) {
-                advance(); // ]
-            }
-        }
-
-        advance(); // '='
-
-        Object expr = parseExpression();
-        if (!(expr instanceof String && expr.equals("__acc__"))) {
-            loadOperand(expr);
-        }
-
-        if (isArray) {
-            // RHS in ACC → temp2, then restore index to $indr, reload RHS, STOV
-            emit("STO temp2");
-            emit("LD temp1");
-            emit("STO $indr");
-            emit("LD temp2");
-            emit("STOV " + varName);
+        if (check(Constants.t_else)) {
+            advance(); // 'else'
+            String labelEnd = newLabel("ELSE");
+            emit("JMP " + labelEnd);
+            emitLabel(labelFalse);
+            parseBlock(); // else
+            emitLabel(labelEnd);
         } else {
-            emit("STO " + varName);
-        }
-
-        if (peek() != null &&
-                peek().getId() == Constants.t_semicolon) {
-            advance();
+            emitLabel(labelFalse);
         }
     }
 
-    private void emitArrayIndexLoad() {
-        Token idx = peek();
-        if (idx == null) throw new IllegalStateException("Índice ausente");
+    // -----------------------------------------------------------------------
+    // Laços
+    // -----------------------------------------------------------------------
 
-        if (idx.getId() == Constants.t_number) {
-            advance();
-            emit("LDI " + idx.getLexeme());
-        } else if (idx.getId() == Constants.t_variable) {
-            advance();
-            emit("LD " + idx.getLexeme());
-        } else {
-            throw new IllegalStateException("Índice inválido: " + idx.getLexeme());
-        }
-    }
+    private void parseWhileStatement() {
+        advance(); // 'while'
+        String labelStart = newLabel("BEGIN_WHILE");
+        emitLabel(labelStart);
 
-    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
-    private void parseReadStatement() {
-        advance(); // read
-        if (peek() != null &&
-                peek().getId() == Constants.t_open_parentheses) {
-            advance(); // (
-        }
-        while (peek() != null &&
-                peek().getId() != Constants.t_close_parentheses)
-        {
-            Token t = peek();
-
-            if (t.getId() == Constants.t_variable)
-            {
-                String varName = t.getLexeme();
-                advance();
-
-                // read(vetor[indice])
-                if (peek() != null &&
-                        peek().getId() == Constants.t_open_bracket)
-                {
-                    advance(); // [
-
-                    loadArrayIndex();
-
-                    if (peek() != null &&
-                            peek().getId() == Constants.t_close_bracket)
-                    {
-                        advance(); // ]
-                    }
-
-                    emit("LD $in_port");
-                    emit("STOV " + varName);
-                }
-                else
-                {
-                    // read(variavel)
-                    emit("LD $in_port");
-                    emit("STO " + varName);
-                }
-            }
-            else if (t.getId() == Constants.t_comma)
-            {
-                advance();
-            }
-            else
-            {
-                advance();
-            }
-        }
-
-        if (peek() != null &&
-                peek().getId() == Constants.t_close_parentheses)
-        {
-            advance(); // )
-        }
-
-        if (peek() != null &&
-                peek().getId() == Constants.t_semicolon)
-        {
-            advance(); // ;
-        }
-    }
-
-    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
-    private void parseConditionalStatement() {
-        _conditionalStatement = true;
-
-        int ifId = _ifsCount++;
-
-        advance(); // if
-        advance(); // (
-
-        parseExpression();
-
-        advance(); // )
+        String branchFalse = parseCondition();
+        String labelEnd    = newLabel("END_WHILE");
+        emit(branchFalse + " " + labelEnd);
 
         parseBlock();
 
-        Token next = peek();
-
-        boolean hasElse =
-                next != null &&
-                        next.getId() == Constants.t_else;
-
-        if (hasElse) {
-            String elseLabel = "ELSE" + ifId;
-            String endLabel  = "FIMSE" + ifId;
-            replaceLastFalseJumpTarget(elseLabel);
-            emit("JMP " + endLabel);
-            codeLines.add(elseLabel + ":");
-            advance(); // else
-            parseBlock();
-            codeLines.add(endLabel + ":");
-        }
-        else {
-            String endLabel = "FIMSE" + ifId;
-            replaceLastFalseJumpTarget(endLabel);
-            codeLines.add(endLabel + ":");
-        }
-
-        _conditionalStatement = false;
+        emit("JMP " + labelStart);
+        emitLabel(labelEnd);
     }
 
-    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
-    private void parseBlock() {
-        if (peek() != null &&
-                peek().getId() == Constants.t_open_brace) {
-            advance();
-        }
+    private void parseDoWhileStatement() {
+        advance(); // 'do'
+        String labelStart = newLabel("DO_WHILE");
+        emitLabel(labelStart);
+        parseBlock();
 
-        while (peek() != null &&
-                peek().getId() != Constants.t_close_brace) {
-            parseStatement();
-        }
+        match(Constants.t_while);
+        match(Constants.t_open_parentheses);
+        _nextTemp = TEMP_BASE;
+        String branchTrue = parseInlineConditionPositive();
+        match(Constants.t_close_parentheses);
+        match(Constants.t_semicolon);
 
-        if (peek() != null &&
-                peek().getId() == Constants.t_close_brace) {
-            advance();
+        emit(branchTrue + " " + labelStart);
+    }
+
+    private void parseForStatement() {
+        advance(); // 'for'
+        match(Constants.t_open_parentheses);
+
+        // Inicialização
+        _nextTemp = TEMP_BASE;
+        parseForInit();
+        match(Constants.t_semicolon);
+
+        // Condição — emite rótulo de início do laço
+        String labelStart = newLabel("BEGIN_FOR");
+        String labelEnd   = newLabel("END_FOR");
+        emitLabel(labelStart);
+
+        if (!check(Constants.t_semicolon)) {
+            _nextTemp = TEMP_BASE;
+            String branchFalse = parseInlineCondition();
+            emit(branchFalse + " " + labelEnd);
+        }
+        match(Constants.t_semicolon);
+
+        // Salva a seção de atualização e a pula por enquanto
+        int updateStart = _pos;
+        int depth = 0;
+        while (_pos < _tokens.size()) {
+            int id = _tokens.get(_pos).getId();
+            if (id == Constants.t_open_parentheses) depth++;
+            if (id == Constants.t_close_parentheses) {
+                if (depth == 0) break;
+                depth--;
+            }
+            _pos++;
+        }
+        int updateEnd = _pos;
+        match(Constants.t_close_parentheses);
+
+        // Corpo do laço
+        parseBlock();
+
+        // Emite a atualização (i++, i = i+1, etc.)
+        int savedPos = _pos;
+        _pos = updateStart;
+        _nextTemp = TEMP_BASE;
+        parseForUpdate(updateEnd);
+        _pos = savedPos;
+
+        emit("JMP " + labelStart);
+        emitLabel(labelEnd);
+    }
+
+    /** Inicialização do for: 'int i = 0' ou 'i = 0'. Para antes do ';'. */
+    private void parseForInit() {
+        if (check(Constants.t_semicolon)) return;
+
+        if (TYPE_KEYWORDS.contains(peek().getId())) {
+            advance(); // tipo
+            if (!check(Constants.t_variable)) return;
+            String varName = advance().getLexeme();
+            if (check(Constants.t_equals)) {
+                advance(); // =
+                parseExpression();
+                emit("STO " + varName);
+            }
+        } else if (check(Constants.t_variable) && isAssignmentAhead()) {
+            parseAssignmentNoSemi();
         }
     }
 
-    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
-    private void parseWriteStatement() {
-        advance(); // write
-        advance(); // (
+    /** Atualização do for: i++, i--, i = i+1. Para ao atingir endPos. */
+    private void parseForUpdate(int endPos) {
+        while (_pos < endPos) {
+            if (check(Constants.t_comma)) { advance(); continue; }
+            if (!check(Constants.t_variable)) { advance(); continue; }
 
-        while (peek() != null &&
-                peek().getId() != Constants.t_close_parentheses) {
+            Token after = peek(1);
+            if (after == null) { advance(); break; }
 
-            parseExpression();
-            emit("STO $out_port");
-
-            if (peek() != null &&
-                    peek().getId() == Constants.t_comma) {
+            if (after.getId() == Constants.t_increment) {
+                String n = advance().getLexeme(); advance();
+                emit("LD " + n); emit("ADDI 1"); emit("STO " + n);
+            } else if (after.getId() == Constants.t_decrement) {
+                String n = advance().getLexeme(); advance();
+                emit("LD " + n); emit("SUBI 1"); emit("STO " + n);
+            } else if (isAssignmentAhead()) {
+                parseAssignmentNoSemi();
+            } else {
                 advance();
             }
         }
+    }
 
-        if (peek() != null) advance(); // )
-        if (peek() != null &&
-                peek().getId() == Constants.t_semicolon) {
+    /** Analisa { lista de statements }. */
+    private void parseBlock() {
+        match(Constants.t_open_brace);
+        while (!check(Constants.t_close_brace) && _pos < _tokens.size()) {
+            parseStatement();
+        }
+        match(Constants.t_close_brace);
+    }
+
+    // -----------------------------------------------------------------------
+    // Condições relacionais
+    // -----------------------------------------------------------------------
+
+    /** Analisa (lhs relop rhs) e retorna instrução de desvio quando condição é FALSA. */
+    private String parseCondition() {
+        match(Constants.t_open_parentheses);
+        _nextTemp = TEMP_BASE;
+        String result = parseInlineCondition();
+        match(Constants.t_close_parentheses);
+        return result;
+    }
+
+    /** Analisa lhs relop rhs sem parênteses; retorna branch negado (pula bloco se falso). */
+    private String parseInlineCondition() {
+        parseExpression();
+        int lhsTemp = allocTemp();
+        emit("STO " + lhsTemp);
+
+        Token op = peek();
+        if (op != null && isRelationalOp(op.getId())) {
+            String opLex = op.getLexeme();
             advance();
+            parseExpression();
+            int rhsTemp = allocTemp();
+            emit("STO " + rhsTemp);
+            emit("LD " + lhsTemp);
+            emit("SUB " + rhsTemp);
+            return negatedBranch(opLex);
         }
+        // Sem operador relacional: considera não-zero como verdadeiro
+        emit("LD " + lhsTemp);
+        return "BEQ";
     }
 
-    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
-    // Analisar se há alguma maneira de simplificar a resolução/redução de expressões
-    private Object parseExpression() {
+    /** Analisa lhs relop rhs; retorna branch positivo (repete laço se verdadeiro). */
+    private String parseInlineConditionPositive() {
+        parseExpression();
+        int lhsTemp = allocTemp();
+        emit("STO " + lhsTemp);
 
-        Object left = parseSimplePrimary();
-
-        if (left == null) {
-            return null;
-        }
-
-        loadOperand(left);
-
-        while (peek() != null) {
-            // TODO: Melhorar isso para um switch case
-            if (isBinaryOperator(peek().getId())) {
-
-                Token opToken = advance();
-
-                Object right = parseSimplePrimary();
-
-                if (right == null) {
-                    break;
-                }
-
-                emitBinaryOperation(opToken, right);
-
-                // TODO: Avaliar se é realmente necessário utilizar este __acc__. Eu gostaria de evitar ele
-                left = "__acc__";
-            }
-            else if (isRelationalOperator(peek().getId())) {
-
-                Token op = advance();
-
-                Object right = parseSimplePrimary();
-
-                left = parseRelationalExpression(
-                        left,
-                        op,
-                        right
-                );
-            }
-            else {
-                break;
-            }
-        }
-
-        return "__acc__";
-    }
-
-    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
-    private boolean parseRelationalExpression(
-            Object leftExpression,
-            Token op,
-            Object rightExpression)
-    {
-        if (!(leftExpression instanceof Integer)) throw new IllegalArgumentException();
-        if (!(rightExpression instanceof Integer)) throw new IllegalArgumentException();
-
-        int left = (Integer) leftExpression;
-        int right = (Integer) rightExpression;
-
-        // Consider left and right to be always integer for now
-        // TODO: Implementar para quando left e/ou right forem váriaveis ao invés de inteiros
-        emit("LDI " + left);
-        emit("STO temp1");
-        emit("LDI " + right);
-        emit("STO temp2");
-        emit("LD temp1");
-        emit("SUB temp2");
-
-        if (_conditionalStatement) {
-            String branchType = switch (op.getId()) {
-                case Constants.t_equality      -> "BNE";
-                case Constants.t_inequality    -> "BEQ";
-                case Constants.t_less_than     -> "BGT";
-                case Constants.t_greater_than  -> "BLT";
-                case Constants.t_less_equal    -> "BGE";
-                case Constants.t_greater_equal -> "BLE";
-                default ->
-                        throw new IllegalArgumentException(
-                                "Operador relacional inválido: " + op.getLexeme());
-            };
-
-            _conditionalFalseLabel = "__FALSE_IF_" + _ifsCount;
-
-            emit(branchType + " " + _conditionalFalseLabel);
-        }
-
-        return switch (op.getId()) {
-            case Constants.t_equality      -> left == right;
-            case Constants.t_inequality    -> left != right;
-            case Constants.t_less_than     -> left < right;
-            case Constants.t_greater_than  -> left > right;
-            case Constants.t_less_equal    -> left <= right;
-            case Constants.t_greater_equal -> left >= right;
-            default -> throw new IllegalArgumentException(
-                    "Operador relacional inválido: " + op.getLexeme());
-        };
-    }
-
-    // TODO: Esta função deveria receber uma entrada de texto com o código a ser analisdo, e retornar o código BIP equivalente
-    private Object parseSimplePrimary() {
-        Token t = peek();
-        if (t == null) return null;
-        int id = t.getId();
-
-        if (id == Constants.t_variable) {
-            String varName = t.getLexeme();
+        Token op = peek();
+        if (op != null && isRelationalOp(op.getId())) {
+            String opLex = op.getLexeme();
             advance();
-            if (peek() != null && peek().getId() == Constants.t_open_bracket) {
-                advance(); // [
-                emitArrayIndexLoad();
-                emit("STO $indr");
-                emit("LDV " + varName);
-                if (peek() != null && peek().getId() == Constants.t_close_bracket) {
-                    advance(); // ]
-                }
-                return "__acc__";
-            }
-            return varName;
+            parseExpression();
+            int rhsTemp = allocTemp();
+            emit("STO " + rhsTemp);
+            emit("LD " + lhsTemp);
+            emit("SUB " + rhsTemp);
+            return positiveBranch(opLex);
         }
-        if (id == Constants.t_number) { advance(); return Integer.parseInt(t.getLexeme()); }
-        if (id == Constants.t_binary_number) {
-            advance();
-            return Long.parseLong(t.getLexeme().substring(2), 2);
+        emit("LD " + lhsTemp);
+        return "BNE";
+    }
+
+    // -----------------------------------------------------------------------
+    // Return
+    // -----------------------------------------------------------------------
+
+    private void parseReturnStatement() {
+        advance(); // 'return'
+        if (!check(Constants.t_semicolon)) {
+            _nextTemp = TEMP_BASE;
+            parseExpression();
+            emit("STO " + RET_ADDR);
         }
-        if (id == Constants.t_hex_number) {
-            advance();
-            return Long.parseLong(t.getLexeme().substring(2), 16);
-        }
-        if (id == Constants.t_real_number) { advance(); return t.getLexeme(); }
-        if (id == Constants.t_char_literal) { advance(); return (int) t.getLexeme().charAt(1); }
-        if (id == Constants.t_true) { advance(); return true; }
-        if (id == Constants.t_false) { advance(); return false; }
-
-        advance();
-        return null;
+        match(Constants.t_semicolon);
+        emit("RETURN");
     }
 
-    // TODO: O certo seria agrupar todas as constantes de type em um array/list e, parar verificar se um id é uma constante de type, usar list.contain(id)
-    private boolean isTypeKeyword(int id) {
-        return id == Constants.t_int || id == Constants.t_bool
-            || id == Constants.t_short || id == Constants.t_long
-            || id == Constants.t_float || id == Constants.t_double
-            || id == Constants.t_decimal || id == Constants.t_char
-            || id == Constants.t_string;
-    }
+    // -----------------------------------------------------------------------
+    // Funções
+    // -----------------------------------------------------------------------
 
-    // TODO: O certo seria agrupar todas as constantes de operadores binário em um array/list e, parar verificar se um id é uma constante de type, usar list.contain(id)
-    private boolean isBinaryOperator(int id) {
-        return id == Constants.t_addition || id == Constants.t_subtraction
-            || id == Constants.t_bit_and || id == Constants.t_bit_or
-            || id == Constants.t_bit_xor || id == Constants.t_bit_shift_left
-            || id == Constants.t_bit_shift_right;
-    }
+    private void parseFunctionDefinition(String funcName) {
+        advance(); // nome da função
+        advance(); // (
 
-    // TODO: Retirar default. Não faz sentido ao meu ver
-    private String bipBinaryOp(String lexeme) {
-        return switch (lexeme) {
-            case "+"  -> "ADD";
-            case "-"  -> "SUB";
-            case "&"  -> "AND";
-            case "|"  -> "OR";
-            case "^"  -> "XOR";
-            case "<<" -> "SLL";
-            case ">>" -> "SRL";
-            default   -> "ADD";
-        };
-    }
+        List<String> params = _functionParams.getOrDefault(funcName, Collections.emptyList());
 
-    // TODO: Analisar se é realmente necessário
-    private void skipDeclaration() {
-        advance(); // type keyword or void
-        if (peek() != null && peek().getId() == Constants.t_variable) {
-            int lookahead = pos + 1;
-            if (lookahead < tokens.size()
-                    && tokens.get(lookahead).getId() == Constants.t_open_parentheses) {
-                // function definition: skip param list and body
-                skipBlock();
-                return;
-            }
-        }
-        skipUntilSemicolon();
-    }
-
-    // TODO: Analisar se é realmente necessário
-    private void skipUntilSemicolon() {
-        while (peek() != null && peek().getId() != Constants.t_semicolon) advance();
-        if (peek() != null) advance();
-    }
-
-    // TODO: Analisar se é realmente necessário
-    private void skipBlock() {
-        while (peek() != null && peek().getId() != Constants.t_open_brace
-                && peek().getId() != Constants.t_semicolon) {
-            advance();
-        }
-        if (peek() == null) return;
-        if (peek().getId() == Constants.t_semicolon) { advance(); return; }
+        // Pula a lista de parâmetros (já analisada no pré-scan)
         int depth = 0;
-        while (peek() != null) {
-            int id = peek().getId();
-            advance();
-            if (id == Constants.t_open_brace) depth++;
-            else if (id == Constants.t_close_brace) { depth--; if (depth == 0) return; }
+        while (_pos < _tokens.size()) {
+            int id = _tokens.get(_pos).getId();
+            if (id == Constants.t_open_parentheses) depth++;
+            if (id == Constants.t_close_parentheses) { if (depth == 0) break; depth--; }
+            _pos++;
+        }
+        match(Constants.t_close_parentheses);
+
+        // Pula o corpo da função na execução principal
+        String skipLabel = newLabel("FUNCTION");
+        emit("JMP " + skipLabel);
+
+        // Rótulo de entrada da função
+        emitLabel(funcName);
+
+        // Copia parâmetros dos slots de chamada para variáveis locais
+        for (int i = 0; i < params.size(); i++) {
+            emit("LD " + (PARAM_BASE + i));
+            emit("STO " + params.get(i));
+        }
+
+        // Corpo
+        parseBlock();
+
+        // RETURN padrão (caso não haja return explícito)
+        emit("RETURN");
+
+        emitLabel(skipLabel);
+    }
+
+    /**
+     * Emite avaliação dos argumentos e instrução CALL.
+     * Valida quantidade de parâmetros e emite erros/avisos se necessário.
+     */
+    private void emitFunctionCallArgs(String funcName) {
+        List<String> expectedParams = _functionParams.get(funcName);
+        int paramIdx = 0;
+
+        while (!check(Constants.t_close_parentheses) && _pos < _tokens.size()) {
+            if (check(Constants.t_comma)) { advance(); continue; }
+            _nextTemp = TEMP_BASE;
+            parseExpression();
+            emit("STO " + (PARAM_BASE + paramIdx));
+            paramIdx++;
+        }
+        match(Constants.t_close_parentheses);
+
+        // Validação de compatibilidade de parâmetros
+        if (expectedParams == null) {
+            emit("; AVISO: funcao '" + funcName + "' nao foi declarada");
+        } else if (paramIdx != expectedParams.size()) {
+            emit("; ERRO: funcao '" + funcName + "' espera " + expectedParams.size()
+                 + " parametro(s) mas recebeu " + paramIdx);
+        }
+
+        emit("CALL " + funcName);
+    }
+
+    // -----------------------------------------------------------------------
+    // read / write
+    // -----------------------------------------------------------------------
+
+    private void parseReadStatement() {
+        advance();
+        match(Constants.t_open_parentheses);
+
+        while (!check(Constants.t_close_parentheses) && _pos < _tokens.size()) {
+            if (check(Constants.t_comma)) { advance(); continue; }
+            if (check(Constants.t_variable)) {
+                Token varTok = advance();
+                String varName = varTok.getLexeme();
+                if (check(Constants.t_open_bracket)) {
+                    advance();
+                    emitSetIndr();
+                    match(Constants.t_close_bracket);
+                    emit("LD $in_port");
+                    emit("STOV " + varName);
+                } else {
+                    emit("LD $in_port");
+                    emit("STO " + varName);
+                }
+            } else { advance(); }
+        }
+        match(Constants.t_close_parentheses);
+        match(Constants.t_semicolon);
+    }
+
+    private void parseWriteStatement() {
+        advance();
+        match(Constants.t_open_parentheses);
+
+        while (!check(Constants.t_close_parentheses) && _pos < _tokens.size()) {
+            if (check(Constants.t_comma)) { advance(); continue; }
+            _nextTemp = TEMP_BASE;
+            parseExpression();
+            emit("STO $out_port");
+        }
+        match(Constants.t_close_parentheses);
+        match(Constants.t_semicolon);
+    }
+
+    // -----------------------------------------------------------------------
+    // Atribuição
+    // -----------------------------------------------------------------------
+
+    private void parseAssignmentStatement() {
+        _nextTemp = TEMP_BASE;
+        Token varTok = advance();
+        String varName = varTok.getLexeme();
+
+        if (check(Constants.t_open_bracket)) {
+            advance(); // [
+            emitLoadIndex();
+            match(Constants.t_close_bracket);
+            int idxTemp = allocTemp();
+            emit("STO " + idxTemp);
+            match(Constants.t_equals);
+            parseExpression();
+            int resTemp = allocTemp();
+            emit("STO " + resTemp);
+            emit("LD " + idxTemp);
+            emit("STO $indr");
+            emit("LD " + resTemp);
+            emit("STOV " + varName);
+        } else {
+            advance(); // '='
+            parseExpression();
+            emit("STO " + varName);
+        }
+        match(Constants.t_semicolon);
+    }
+
+    /** Atribuição sem consumir ';' — usada em for init/update. */
+    private void parseAssignmentNoSemi() {
+        _nextTemp = TEMP_BASE;
+        Token varTok = advance();
+        String varName = varTok.getLexeme();
+
+        if (check(Constants.t_open_bracket)) {
+            advance(); // [
+            emitLoadIndex();
+            int idxTemp = allocTemp();
+            emit("STO " + idxTemp);
+            match(Constants.t_close_bracket);
+            match(Constants.t_equals);
+            parseExpression();
+            int resTemp = allocTemp();
+            emit("STO " + resTemp);
+            emit("LD " + idxTemp);
+            emit("STO $indr");
+            emit("LD " + resTemp);
+            emit("STOV " + varName);
+        } else {
+            advance(); // '='
+            parseExpression();
+            emit("STO " + varName);
         }
     }
 
-    // TODO: Analisar se é realmente necessário
-    private String stripHash(String ref) {
-        if (ref != null && ref.startsWith("#")) return ref.substring(1);
-        return ref != null ? ref : "0";
-    }
+    // -----------------------------------------------------------------------
+    // Expressões
+    // -----------------------------------------------------------------------
 
-    // TODO: Analisar se é realmente necessário
-    private void emit(String instruction) {
-        codeLines.add("    " + instruction);
-    }
+    private void parseExpression() {
+        parsePrimary();
 
-    // TODO: Analisar se é realmente necessário
-    private Token peek() {
-        return pos < tokens.size() ? tokens.get(pos) : null;
-    }
+        while (peek() != null && isBinaryOp(peek().getId())) {
+            String opLex = advance().getLexeme();
+            Token rhs = peek();
+            if (rhs == null) break;
 
-    // TODO: Analisar se é realmente necessário
-    private Token advance() {
-        return pos < tokens.size() ? tokens.get(pos++) : null;
-    }
+            if (isLiteralToken(rhs.getId())) {
+                advance();
+                emit(bipOpImm(opLex) + " " + rhs.getLexeme());
 
-    // TODO: Deveria receber o .data e o .text como entrada e somente organizar em um arquivo .asm
-    private String formatOutput() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(".data\n");
-        for (String line : dataLines) sb.append("    ").append(line).append("\n");
-        sb.append("\n.text\n");
-        for (String line : codeLines) sb.append(line).append("\n");
-        return sb.toString();
-    }
+            } else if (rhs.getId() == Constants.t_variable) {
+                advance();
+                String rhsName = rhs.getLexeme();
 
-    private boolean isRelationalOperator(int id) {
-        return _relationalOPerationConstants.contains(id);
-    }
+                if (check(Constants.t_open_parentheses)) {
+                    // Chamada de função no lado direito do operador
+                    advance(); // (
+                    int tempAcc = allocTemp();
+                    emit("STO " + tempAcc);
+                    emitFunctionCallArgs(rhsName);
+                    emit("LD " + RET_ADDR);
+                    int tempRet = allocTemp();
+                    emit("STO " + tempRet);
+                    emit("LD " + tempAcc);
+                    emit(bipOpMem(opLex) + " " + tempRet);
 
-    // TODO: Analisar se é realmente necessário
-    private void replaceLastFalseJumpTarget(String target) {
-
-        for (int i = codeLines.size() - 1; i >= 0; i--) {
-
-            String line = codeLines.get(i);
-
-            if (line.contains(_conditionalFalseLabel)) {
-                codeLines.set(
-                        i,
-                        line.replace(_conditionalFalseLabel, target)
-                );
-                return;
+                } else if (check(Constants.t_open_bracket)) {
+                    // Acesso a vetor no lado direito
+                    advance(); // [
+                    int leftTemp = allocTemp();
+                    emit("STO " + leftTemp);
+                    emitSetIndr();
+                    match(Constants.t_close_bracket);
+                    emit("LDV " + rhsName);
+                    int vecTemp = allocTemp();
+                    emit("STO " + vecTemp);
+                    emit("LD " + leftTemp);
+                    emit(bipOpMem(opLex) + " " + vecTemp);
+                } else {
+                    emit(bipOpMem(opLex) + " " + rhsName);
+                }
             }
         }
     }
 
-    // TODO: Analisar se é realmente necessário
-    private void loadArrayIndex() {
-        Token idx = peek();
+    private void parsePrimary() {
+        Token t = peek();
+        if (t == null) return;
 
-        if (idx.getId() == Constants.t_number) {
+        if (isLiteralToken(t.getId())) {
             advance();
-            emit("LDI " + idx.getLexeme());
-        }
-        else if (idx.getId() == Constants.t_variable) {
-            advance();
-            emit("LD " + idx.getLexeme());
-        }
-        else {
-            throw new IllegalStateException(
-                    "Índice inválido: " + idx.getLexeme());
-        }
+            emit("LDI " + t.getLexeme());
 
+        } else if (t.getId() == Constants.t_variable) {
+            advance();
+            String name = t.getLexeme();
+
+            if (check(Constants.t_open_parentheses)) {
+                // Chamada de função
+                advance(); // (
+                emitFunctionCallArgs(name);
+                emit("LD " + RET_ADDR);
+
+            } else if (check(Constants.t_open_bracket)) {
+                advance(); // [
+                emitSetIndr();
+                match(Constants.t_close_bracket);
+                emit("LDV " + name);
+            } else {
+                emit("LD " + name);
+            }
+
+        } else if (t.getId() == Constants.t_open_parentheses) {
+            advance();
+            parseExpression();
+            match(Constants.t_close_parentheses);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Declarações
+    // -----------------------------------------------------------------------
+
+    private void skipDeclaration() {
+        advance(); // consome keyword de tipo
+
+        Token name  = peek();
+        Token after = peek(1);
+
+        // Definição de função
+        if (name  != null && name.getId()  == Constants.t_variable &&
+            after != null && after.getId() == Constants.t_open_parentheses) {
+            parseFunctionDefinition(name.getLexeme());
+            return;
+        }
+        // Declaração de vetor — pula até ';'
+        if (name  != null && name.getId()  == Constants.t_variable &&
+            after != null && after.getId() == Constants.t_open_bracket) {
+            skipToSemicolon();
+            return;
+        }
+        // Variável com inicialização — gera código de atribuição
+        if (name  != null && name.getId()  == Constants.t_variable &&
+            after != null && after.getId() == Constants.t_equals) {
+            _nextTemp = TEMP_BASE;
+            String varName = name.getLexeme();
+            advance(); advance(); // var, =
+            parseExpression();
+            emit("STO " + varName);
+            match(Constants.t_semicolon);
+            return;
+        }
+        // Variável sem inicialização — pula
+        skipToSemicolon();
+    }
+
+    private void skipToSemicolon() {
+        while (_pos < _tokens.size()) {
+            if (_tokens.get(_pos++).getId() == Constants.t_semicolon) return;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Helpers de índice de vetor
+    // -----------------------------------------------------------------------
+
+    private void emitLoadIndex() {
+        Token t = peek();
+        if (t == null) return;
+        if (isLiteralToken(t.getId())) { advance(); emit("LDI " + t.getLexeme()); }
+        else if (t.getId() == Constants.t_variable) { advance(); emit("LD " + t.getLexeme()); }
+    }
+
+    private void emitSetIndr() {
+        emitLoadIndex();
         emit("STO $indr");
     }
 
-    // TODO: Analisar se é realmente necessário
+    // -----------------------------------------------------------------------
+    // Alocador de temporários e rótulos
+    // -----------------------------------------------------------------------
+
+    private int    allocTemp() { return _nextTemp++; }
+    private String newLabel(String label)  { return label + (++_labelCounter); }
+
+    private void emitLabel(String label) {
+        _textLines.add(label + ":"); // sem indentação
+    }
+
+    // -----------------------------------------------------------------------
+    // Lookahead helpers
+    // -----------------------------------------------------------------------
+
     private boolean isAssignmentAhead() {
-        int i = pos + 1;
-        if (i < tokens.size() && tokens.get(i).getId() == Constants.t_open_bracket) {
-            int depth = 1;
-            i++;
-            while (i < tokens.size() && depth > 0) {
-                int tid = tokens.get(i).getId();
-                if (tid == Constants.t_open_bracket) depth++;
-                if (tid == Constants.t_close_bracket) depth--;
-                i++;
-            }
-        }
-        return i < tokens.size() && tokens.get(i).getId() == Constants.t_equals;
+        Token next = peek(1);
+        if (next == null) return false;
+        int id = next.getId();
+        return id == Constants.t_equals || id == Constants.t_open_bracket;
     }
 
-    // TODO: Analisar se é realmente necessário
-    private void loadOperand(Object operand) {
-
-        if (operand instanceof Integer) {
-            emit("LDI " + operand);
-        }
-        else if (operand instanceof String) {
-            if (operand.equals("__acc__")) return;
-            emit("LD " + operand);
-        }
+    private boolean isFunctionCallAhead() {
+        Token next = peek(1);
+        return next != null && next.getId() == Constants.t_open_parentheses;
     }
 
-    // TODO: Analisar se é realmente necessário
-    private void emitBinaryOperation(
-            Token operator,
-            Object operand)
-    {
-        switch (operator.getLexeme()) {
-
-            case "<<" -> {
-
-                if (operand instanceof Integer value) {
-
-                    emit("LDI " + value);
-                    emit("STO __shift_tmp");
-                    emit("SLL __shift_tmp");
-                }
-                else {
-                    emit("SLL " + operand);
-                }
-
-                return;
-            }
-
-            case ">>" -> {
-
-                if (operand instanceof Integer value) {
-
-                    emit("LDI " + value);
-                    emit("STO __shift_tmp");
-                    emit("SRL __shift_tmp");
-                }
-                else {
-                    emit("SRL " + operand);
-                }
-
-                return;
-            }
-        }
-
-        String op = bipBinaryOp(operator.getLexeme());
-
-        if (operand instanceof Integer) {
-            emit(op + "I " + operand);
-        }
-        else {
-            emit(op + " " + operand);
-        }
+    private boolean isBinaryOp(int id) {
+        return id == Constants.t_addition       || id == Constants.t_subtraction
+            || id == Constants.t_bit_and        || id == Constants.t_bit_or
+            || id == Constants.t_bit_xor
+            || id == Constants.t_bit_shift_left || id == Constants.t_bit_shift_right;
     }
+
+    private boolean isRelationalOp(int id) {
+        return id == Constants.t_greater_than  || id == Constants.t_less_than
+            || id == Constants.t_greater_equal || id == Constants.t_less_equal
+            || id == Constants.t_equality      || id == Constants.t_inequality;
+    }
+
+    private boolean isLiteralToken(int id) {
+        return id == Constants.t_number        || id == Constants.t_hex_number
+            || id == Constants.t_binary_number || id == Constants.t_real_number;
+    }
+
+    // -----------------------------------------------------------------------
+    // Mapeamento operador → instrução BIP
+    // -----------------------------------------------------------------------
+
+    private String bipOpMem(String op) {
+        return switch (op) {
+            case "+"  -> "ADD";  case "-"  -> "SUB";
+            case "&"  -> "AND";  case "|"  -> "OR";
+            case "^"  -> "XOR";
+            case "<<" -> "SLL";  case ">>" -> "SRL";
+            default -> throw new IllegalArgumentException("Operador desconhecido: " + op);
+        };
+    }
+
+    private String bipOpImm(String op) {
+        return switch (op) {
+            case "+"  -> "ADDI"; case "-"  -> "SUBI";
+            case "&"  -> "ANDI"; case "|"  -> "ORI";
+            case "^"  -> "XORI";
+            case "<<" -> "SLL";  case ">>" -> "SRL";
+            default -> throw new IllegalArgumentException("Operador desconhecido: " + op);
+        };
+    }
+
+    /** Instrução de desvio quando a condição é FALSA (para pular bloco). */
+    private String negatedBranch(String op) {
+        return switch (op) {
+            case ">"  -> "BLE"; case "<"  -> "BGE";
+            case ">=" -> "BLT"; case "<=" -> "BGT";
+            case "==" -> "BNE"; case "!=" -> "BEQ";
+            default -> "BEQ";
+        };
+    }
+
+    /** Instrução de desvio quando a condição é VERDADEIRA (para repetir laço). */
+    private String positiveBranch(String op) {
+        return switch (op) {
+            case ">"  -> "BGT"; case "<"  -> "BLT";
+            case ">=" -> "BGE"; case "<=" -> "BLE";
+            case "==" -> "BEQ"; case "!=" -> "BNE";
+            default -> "BNE";
+        };
+    }
+
+    // -----------------------------------------------------------------------
+    // Utilitários de token
+    // -----------------------------------------------------------------------
+
+    private Token peek()         { return _pos < _tokens.size() ? _tokens.get(_pos) : null; }
+    private Token peek(int off)  { int i = _pos+off; return (i>=0 && i<_tokens.size()) ? _tokens.get(i) : null; }
+    private Token advance()      { return _pos < _tokens.size() ? _tokens.get(_pos++) : null; }
+    private boolean check(int id){ Token t = peek(); return t != null && t.getId() == id; }
+    private boolean match(int id){ if (check(id)) { advance(); return true; } return false; }
+    private void emit(String s)  { _textLines.add("    " + s); }
 }
