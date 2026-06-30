@@ -453,168 +453,207 @@ public class CompilerCodeGenTests {
         assertTrue(asm.contains("HLT 0"));
     }
 
-//
-//    @Test
-//    void testFunctionReturn() {
-//        String asm = getAsm("""
-//            int soma(){
-//                return 10;
-//            }
-//
-//            int x;
-//            x = soma();
-//        """);
-//
-//        assertTrue(asm.contains("RET"),
-//                "Missing RET instruction.\n" + asm);
-//
-//        assertTrue(asm.contains("CALL"));
-//    }
-//
-//    @Test
-//    void testReturnInsideExpression() {
-//        String asm = getAsm("""
-//            int f(){
-//                return 2;
-//            }
-//
-//            int x;
-//            x = f() + 3;
-//        """);
-//
-//        assertTrue(asm.contains("CALL"));
-//        assertTrue(asm.contains("ADD"));
-//    }
-//
-//    @Test
-//    void testWrongParameterCount() {
-//        Exception ex = assertThrows(RuntimeException.class, () ->
-//                getAsm("""
-//            void soma(int a, int b){}
-//            soma(1);
-//        """)
-//        );
-//
-//        assertTrue(ex.getMessage().contains("esperava 2 parâmetros"));
-//    }
-//
-////    @Test
-////    void testWrongParameterType() {
-////        Exception ex = assertThrows(RuntimeException.class, () ->
-////                getAsm("""
-////            void teste(int a){}
-////            teste(true);
-////        """)
-////        );
-////
-////        assertTrue(ex.getMessage().contains("tipo"));
-////    }
-//
-//    @Test
-//    void testWrongParameterOrder() {
-//        Exception ex = assertThrows(RuntimeException.class, () ->
-//                getAsm("""
-//            void teste(int a, boolean b){}
-//            teste(false, 1);
-//        """)
-//        );
-//
-//        assertTrue(ex.getMessage().contains("parâmetro"));
-//    }
-//
-//    @Test
-//    void testUndefinedFunction() {
-//        Exception ex = assertThrows(RuntimeException.class, () ->
-//                getAsm("""
-//            teste();
-//        """)
-//        );
-//
-//        assertTrue(ex.getMessage().contains("não existe"));
-//    }
-//
-//    @Test
-//    void testMeaningfulErrorMessage() {
-//        Exception ex = assertThrows(RuntimeException.class, () ->
-//                getAsm("""
-//            foo();
-//        """)
-//        );
-//
-//        assertFalse(ex.getMessage().isBlank());
-//    }
+    @Test
+    void testRelationalNotEqual() {
+        String asm = getAsm("""
+            int a = 2;
+            if (a != 2) {
+                write(a);
+            }
+        """);
 
-    //    @Test
-//    void testCall() {
-//        String asm = getAsm("""
-//        void teste(){
-//            write(1);
-//        }
-//
-//        teste();
-//    """);
-//
-//        assertTrue(asm.contains("CALL"));
-//        assertTrue(asm.contains("RETURN"));
-//    }
-//
-////    @Test
-////    void testReturn() {
-////        String asm = getAsm("""
-////        int teste(){
-////            return 5;
-////        }
-////
-////        int a;
-////
-////        a = teste();
-////    """);
-////
-////        assertTrue(asm.contains("CALL"));
-////        assertTrue(asm.contains("RETURN"));
-////        assertTrue(asm.contains("STO     a"));
-////    }
-////
-////    @Test
-////    void testParameterPassing() {
-////        String asm = getAsm("""
-////        void soma(int a, int b){
-////            write(a);
-////        }
-////
-////        soma(1,2);
-////    """);
-////
-////        assertTrue(asm.contains("CALL"));
-////
-////        long stores = asm.lines()
-////                .filter(s -> s.contains("STO"))
-////                .count();
-////
-////        assertTrue(stores >= 2);
-////    }
-////
-////    @Test
-////    void testWrongNumberOfParameters() {
-////
-////        Exception ex = assertThrows(RuntimeException.class,
-////                () -> getAsm("""
-////            void soma(int a, int b){}
-////
-////            soma(1);
-////        """));
-////
-////        assertTrue(ex.getMessage().contains("esperava 2 parâmetros"));
-////    }
-////
-////    @Test
-////    void testUnknownProcedure() {
-////
-////        Exception ex = assertThrows(RuntimeException.class,
-////                () -> getAsm("""
-////            teste();
-////        """));
-////
-////        assertTrue(ex.getMessage().contains("não existe"));
-////    }
+        assertTrue(asm.contains("LDI 2"));
+        assertTrue(asm.contains("STO a"));
+        assertTrue(asm.contains("LD a"));
+        assertTrue(asm.contains("STO 1000"));
+        assertTrue(asm.contains("STO 1001"));
+        assertTrue(asm.contains("LD 1000"));
+        assertTrue(asm.contains("SUB 1001"));
+        assertTrue(asm.contains("BEQ FIMSE1"));
+        assertTrue(asm.contains("LD a"));
+        assertTrue(asm.contains("STO $out_port"));
+        assertTrue(asm.contains("FIMSE1:"));
+        assertTrue(asm.contains("HLT 0"));
+    }
+
+    @Test
+    void testRelationalGreaterEqual() {
+        String asm = getAsm("""
+            int a = 2;
+            if (a >= 2) {
+                write(a);
+            }
+        """);
+
+        assertTrue(asm.contains("LDI 2"));
+        assertTrue(asm.contains("STO a"));
+        assertTrue(asm.contains("LD a"));
+        assertTrue(asm.contains("STO 1000"));
+        assertTrue(asm.contains("STO 1001"));
+        assertTrue(asm.contains("LD 1000"));
+        assertTrue(asm.contains("SUB 1001"));
+        assertTrue(asm.contains("BLT FIMSE1"));
+        assertTrue(asm.contains("LD a"));
+        assertTrue(asm.contains("STO $out_port"));
+        assertTrue(asm.contains("FIMSE1:"));
+        assertTrue(asm.contains("HLT 0"));
+    }
+
+    @Test
+    void testRelationalLessEqual() {
+        String asm = getAsm("""
+            int a = 2;
+            if (a <= 2) {
+                write(a);
+            }
+        """);
+
+        assertTrue(asm.contains("LDI 2"));
+        assertTrue(asm.contains("STO a"));
+        assertTrue(asm.contains("LD a"));
+        assertTrue(asm.contains("STO 1000"));
+        assertTrue(asm.contains("STO 1001"));
+        assertTrue(asm.contains("LD 1000"));
+        assertTrue(asm.contains("SUB 1001"));
+        assertTrue(asm.contains("BGT FIMSE1"));
+        assertTrue(asm.contains("LD a"));
+        assertTrue(asm.contains("STO $out_port"));
+        assertTrue(asm.contains("FIMSE1:"));
+        assertTrue(asm.contains("HLT 0"));
+    }
+
+    @Test
+    void testNestedForInFor() {
+        String asm = getAsm("""
+            for(int i = 0; i < 3; i = i + 1){
+                for(int j = 0; j < 2; j = j + 1){
+                    write(j);
+                }
+            }
+        """);
+
+        assertTrue(asm.contains("LDI 0"));
+        assertTrue(asm.contains("STO i"));
+        assertTrue(asm.contains("BEGIN_FOR1:"));
+        assertTrue(asm.contains("LD i"));
+        assertTrue(asm.contains("STO 1000"));
+        assertTrue(asm.contains("LDI 3"));
+        assertTrue(asm.contains("STO 1001"));
+        assertTrue(asm.contains("LD 1000"));
+        assertTrue(asm.contains("SUB 1001"));
+        assertTrue(asm.contains("BGE END_FOR2"));
+        assertTrue(asm.contains("STO j"));
+        assertTrue(asm.contains("BEGIN_FOR3:"));
+        assertTrue(asm.contains("LD j"));
+        assertTrue(asm.contains("LDI 2"));
+        assertTrue(asm.contains("BGE END_FOR4"));
+        assertTrue(asm.contains("STO $out_port"));
+        assertTrue(asm.contains("ADDI 1"));
+        assertTrue(asm.contains("JMP BEGIN_FOR3"));
+        assertTrue(asm.contains("END_FOR4:"));
+        assertTrue(asm.contains("JMP BEGIN_FOR1"));
+        assertTrue(asm.contains("END_FOR2:"));
+        assertTrue(asm.contains("HLT 0"));
+    }
+
+    @Test
+    void testDoWhileInsideIf() {
+        String asm = getAsm("""
+            int x = 0;
+            if(x == 0){
+                do {
+                    x = x + 1;
+                } while(x < 3);
+            }
+            write(x);
+        """);
+
+        assertTrue(asm.contains("LDI 0"));
+        assertTrue(asm.contains("STO x"));
+        assertTrue(asm.contains("LD x"));
+        assertTrue(asm.contains("STO 1000"));
+        assertTrue(asm.contains("STO 1001"));
+        assertTrue(asm.contains("LD 1000"));
+        assertTrue(asm.contains("SUB 1001"));
+        assertTrue(asm.contains("BNE FIMSE1"));
+        assertTrue(asm.contains("DO_WHILE2:"));
+        assertTrue(asm.contains("ADDI 1"));
+        assertTrue(asm.contains("LDI 3"));
+        assertTrue(asm.contains("BLT DO_WHILE2"));
+        assertTrue(asm.contains("FIMSE1:"));
+        assertTrue(asm.contains("STO $out_port"));
+        assertTrue(asm.contains("HLT 0"));
+    }
+
+    @Test
+    void testIfElseChain() {
+        String asm = getAsm("""
+            int a = 1;
+            if(a == 1){
+                write(1);
+            } else {
+                if(a == 2){
+                    write(2);
+                } else {
+                    write(3);
+                }
+            }
+        """);
+
+        assertTrue(asm.contains("LDI 1"));
+        assertTrue(asm.contains("STO a"));
+        assertTrue(asm.contains("LD a"));
+        assertTrue(asm.contains("STO 1000"));
+        assertTrue(asm.contains("STO 1001"));
+        assertTrue(asm.contains("LD 1000"));
+        assertTrue(asm.contains("SUB 1001"));
+        assertTrue(asm.contains("BNE FIMSE1"));
+        assertTrue(asm.contains("STO $out_port"));
+        assertTrue(asm.contains("JMP ELSE2"));
+        assertTrue(asm.contains("FIMSE1:"));
+        assertTrue(asm.contains("LDI 2"));
+        assertTrue(asm.contains("BNE FIMSE3"));
+        assertTrue(asm.contains("JMP ELSE4"));
+        assertTrue(asm.contains("FIMSE3:"));
+        assertTrue(asm.contains("LDI 3"));
+        assertTrue(asm.contains("ELSE4:"));
+        assertTrue(asm.contains("ELSE2:"));
+        assertTrue(asm.contains("HLT 0"));
+    }
+
+    @Test
+    void testWhileInsideFor() {
+        String asm = getAsm("""
+            for(int i = 0; i < 3; i = i + 1){
+                int j = 0;
+                while(j < 2){
+                    j = j + 1;
+                }
+                write(i);
+            }
+        """);
+
+        assertTrue(asm.contains("LDI 0"));
+        assertTrue(asm.contains("STO i"));
+        assertTrue(asm.contains("BEGIN_FOR1:"));
+        assertTrue(asm.contains("LD i"));
+        assertTrue(asm.contains("STO 1000"));
+        assertTrue(asm.contains("LDI 3"));
+        assertTrue(asm.contains("STO 1001"));
+        assertTrue(asm.contains("LD 1000"));
+        assertTrue(asm.contains("SUB 1001"));
+        assertTrue(asm.contains("BGE END_FOR2"));
+        assertTrue(asm.contains("STO j"));
+        assertTrue(asm.contains("BEGIN_WHILE3:"));
+        assertTrue(asm.contains("LD j"));
+        assertTrue(asm.contains("LDI 2"));
+        assertTrue(asm.contains("BGE END_WHILE4"));
+        assertTrue(asm.contains("ADDI 1"));
+        assertTrue(asm.contains("JMP BEGIN_WHILE3"));
+        assertTrue(asm.contains("END_WHILE4:"));
+        assertTrue(asm.contains("STO $out_port"));
+        assertTrue(asm.contains("JMP BEGIN_FOR1"));
+        assertTrue(asm.contains("END_FOR2:"));
+        assertTrue(asm.contains("HLT 0"));
+    }
 }
